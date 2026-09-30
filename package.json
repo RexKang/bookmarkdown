@@ -1,0 +1,10 @@
+{
+  "name": "bookmarkdown",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "本地优先的视频收藏海报墙（Chrome MV3 扩展）",
+  "scripts": {
+    "test": "node test/md.test.mjs"
+  }
+}
