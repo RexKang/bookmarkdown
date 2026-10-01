@@ -2,7 +2,7 @@
 // handles：库目录句柄（跨会话复用）；entries：条目索引缓存（库页增量渲染用）。
 
 const DB_NAME = 'bookmarkdown';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // v2：entries 改无 keyPath —— idbSet 传显式 key 与 keyPath 冲突会抛 DataError
 
 function openDb() {
   return new Promise((resolve, reject) => {
@@ -10,7 +10,9 @@ function openDb() {
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains('handles')) db.createObjectStore('handles');
-      if (!db.objectStoreNames.contains('entries')) db.createObjectStore('entries', { keyPath: 'id' });
+      // entries 是纯索引缓存：升级时直接重建（无 keyPath，用 'file:<名>' 作 key）
+      if (db.objectStoreNames.contains('entries')) db.deleteObjectStore('entries');
+      db.createObjectStore('entries');
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);

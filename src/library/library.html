@@ -3,50 +3,102 @@
 <head>
 <meta charset="utf-8">
 <title>BookmarkDown 库</title>
-<style>
-  * { box-sizing: border-box; }
-  body { margin: 0; background: #0b0d12; color: #f2f4f8;
-         font: 14px/1.7 system-ui, "Microsoft YaHei", sans-serif;
-         display: flex; justify-content: center; padding: 44px 20px; }
-  .card { width: min(680px, 100%); }
-  h1 { display: flex; align-items: center; gap: 10px; font-size: 20px; margin: 0 0 6px; }
-  h1 i { width: 8px; height: 24px; border-radius: 3px; background: #e50914; }
-  .tag { font-size: 11px; color: #96a0b2; border: 1px solid #2a3140; border-radius: 999px; padding: 2px 10px; }
-  section { margin-top: 22px; background: #12161f; border: 1px solid #232b3a; border-radius: 12px; padding: 18px 20px; }
-  h2 { margin: 0 0 8px; font-size: 15px; }
-  p { color: #96a0b2; margin: 0 0 12px; }
-  button { border: 0; border-radius: 7px; padding: 9px 14px; background: #2965cc; color: #fff;
-           font: inherit; cursor: pointer; }
-  .row { display: flex; gap: 10px; flex-wrap: wrap; color: #cfd6e2; margin: 6px 0; }
-  .row b { color: #fff; }
-  .hint { color: #6d7686; font-size: 12px; }
-  .kbd { border: 1px solid #2a3140; border-radius: 5px; padding: 0 6px; font-size: 12px; }
-</style>
+<link rel="stylesheet" href="library.css">
 </head>
 <body>
+
+<!-- 状态屏：未选目录 -->
+<div id="screen-onboard" class="screen" hidden>
   <div class="card">
-    <h1><i></i>BookmarkDown 库 <span class="tag">v0.1.0 开发版</span></h1>
-    <p class="hint">当前为最小可用库页（选目录 / 解锁 / 状态）；完整海报墙界面按定稿设计稿装配中。</p>
-
-    <section id="onboard">
-      <h2>选择库目录</h2>
-      <p>库 = 一个普通文件夹：每条收藏写成 Markdown 条目 + 封面快照，可直接用 Obsidian 打开、用 git 管理。</p>
-      <button id="pick">选择库目录…</button>
-    </section>
-
-    <section id="locked" hidden>
-      <h2>库目录需要授权</h2>
-      <p>浏览器重启后需要一次点击完成授权（选「每次访问都允许」后不再询问）。</p>
-      <button id="unlock">解锁库</button>
-    </section>
-
-    <section id="ready" hidden>
-      <h2>库已就绪</h2>
-      <div class="row">目录：<b id="libName"></b></div>
-      <div class="row">合集：<span id="files">…</span></div>
-      <p class="hint">在任意网页右键 →「收藏到 BookmarkDown」即可收藏（页面 / 图片 / 链接）。</p>
-    </section>
+    <h1><i></i>BookmarkDown <span class="tag">v0.1.0</span></h1>
+    <p>本地优先的视频收藏海报墙：每条收藏写成 Markdown 条目 + 封面快照，可直接用 Obsidian 打开、用 git 管理。</p>
+    <p>第一步：选择一个文件夹作为「库」（空文件夹即可）。</p>
+    <button id="pick">选择库目录…</button>
   </div>
-  <script type="module" src="library.js"></script>
+</div>
+
+<!-- 状态屏：需要授权 -->
+<div id="screen-locked" class="screen" hidden>
+  <div class="card">
+    <h1><i></i>库目录需要授权</h1>
+    <p id="lockedText">浏览器重启后需要一次点击完成授权（选「每次访问都允许」后不再询问）。</p>
+    <button id="unlock">解锁库</button>
+  </div>
+</div>
+
+<!-- 主应用 -->
+<div id="app" class="shell" hidden>
+  <aside class="side">
+    <div class="logo"><span class="mark"></span><span><b>BookmarkDown</b><small>本地收藏 · 海报墙</small></span></div>
+    <div class="navitem" id="navWall"><span class="ic">▦</span>墙</div>
+    <div class="navitem" id="navColl"><span class="ic">🗂</span>合集</div>
+    <div class="collistp" id="collist"></div>
+    <div class="navitem" id="navSet"><span class="ic">⚙</span>设置</div>
+    <div class="sideinfo" id="sideinfo">库：…</div>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <input class="search" id="search" placeholder="🔍 搜索标题 / 作者 / 合集…">
+      <select class="chip" id="fStatus">
+        <option value="">状态：全部</option>
+        <option value="想看">想看</option>
+        <option value="在看">在看</option>
+        <option value="看过">看过</option>
+      </select>
+      <select class="chip" id="fTag"><option value="">标签：全部</option></select>
+      <div class="spacer"></div>
+      <div class="seg" id="segView">
+        <span data-mode="grid" class="on">▦ 网格</span><span data-mode="list">☰ 列表</span>
+      </div>
+    </header>
+    <div class="opbar">
+      <button id="btnAuthor">批量设作者</button>
+      <button id="btnColl" class="secondary">加入合集</button>
+      <button id="btnDelEntry" class="secondary" disabled>删除选中</button>
+      <button id="btnNewColl" hidden>＋ 新建合集</button>
+      <button id="btnDelColl" class="secondary" hidden disabled>删除合集</button>
+      <span class="hint" id="selInfo">已选 0 条</span>
+      <div class="inlineform" id="authorForm" hidden>
+        <input id="authorInput" placeholder="输入作者名">
+        <button id="authorApply">应用到已选</button>
+        <button id="authorCancel" class="secondary">取消</button>
+      </div>
+      <div class="inlineform" id="collForm" hidden>
+        <select id="collSelect"></select>
+        <input id="collNew" placeholder="或新建合集名…">
+        <button id="collApply">加入</button>
+        <button id="collCancel" class="secondary">取消</button>
+      </div>
+      <div class="inlineform" id="newCollForm" hidden>
+        <input id="newCollName" placeholder="合集名">
+        <button id="newCollApply">创建</button>
+        <button id="newCollCancel" class="secondary">取消</button>
+      </div>
+    </div>
+    <div class="viewtitle"><b id="vtName">全部条目</b><span id="vtCount"></span></div>
+    <div class="content" id="content"></div>
+    <footer class="statusbar">
+      <span id="ftCount">共 0 条</span>
+      <span id="ftColls">合集 0 个</span>
+      <span id="ftLib">库：…</span>
+      <span id="ftHint">右键任意网页 →「收藏到 BookmarkDown」</span>
+    </footer>
+  </div>
+</div>
+
+<!-- 确认框 / toast -->
+<div id="modal" class="modal" hidden>
+  <div class="dialog">
+    <h3 id="modalTitle">确认删除</h3>
+    <p id="modalText"></p>
+    <div class="mbtn">
+      <button id="modalCancel" class="secondary">取消</button>
+      <button id="modalOk" class="danger">删除</button>
+    </div>
+  </div>
+</div>
+<div id="toast" class="toast" hidden></div>
+
+<script type="module" src="library.js"></script>
 </body>
 </html>

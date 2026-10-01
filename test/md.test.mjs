@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import {
   parseEntries, findEntry, findEntryByUrl, renderEntry,
-  replaceEntry, removeEntry, appendEntry, extractNote, parseTopics, upsertTopic,
+  replaceEntry, removeEntry, appendEntry, extractNote, parseTopics, upsertTopic, removeTopic,
 } from '../src/lib/md.js';
 import { normalizeUrl, safeStem, nowStamp } from '../src/lib/util.js';
 
@@ -61,6 +61,9 @@ const up1 = upsertTopic(idx, { id: 'inbox', title: '收件箱', file: '收件箱
 ok(upsertTopic(up1.text, { id: 'inbox', title: '收件箱', file: '收件箱.md', parent: null, order: 0 }).text === up1.text, '重复 upsert 不重复追加');
 const up2 = upsertTopic(up1.text, { id: 'tech', title: '技术', file: '技术.md', parent: null, order: 1 });
 ok(parseTopics(up2.text).length === 2 && parseTopics(up2.text)[1].file === '技术.md', '新合集追加成功');
+const { text: idxTrimmed, removed: idxRemovedFlag } = removeTopic(up2.text, { file: '技术.md' });
+ok(idxRemovedFlag && parseTopics(idxTrimmed).length === 1, 'removeTopic 按 file 移除');
+ok(!idxTrimmed.includes('技术.md'), '移除后无残留');
 
 console.log('· 工具函数');
 ok(normalizeUrl('https://x.com/a?utm_a=1&spm=2&keep=3#h') === 'https://x.com/a?keep=3', 'normalizeUrl 去跟踪参数与 hash');

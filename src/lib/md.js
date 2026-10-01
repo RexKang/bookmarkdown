@@ -114,6 +114,25 @@ export function upsertTopic(indexText, topic) {
   return { text: `${base}\n\n${renderTopic(topic)}\n`, topics: [...topics, topic] };
 }
 
+/** 从 index.md 中移除合集（按 id 或 file 匹配）；返回 { text, removed } */
+export function removeTopic(indexText, target = {}) {
+  let removed = false;
+  const out = String(indexText).replace(
+    /<!-- bookmarkdown-topic (\{.*\}) -->\r?\n- \[[^\]]*\]\([^)]*\)/g,
+    (m, json) => {
+      if (removed) return m;
+      try {
+        const t = JSON.parse(json);
+        if ((target.id && t.id === target.id) || (target.file && t.file === target.file)) {
+          removed = true;
+          return '';
+        }
+      } catch { /* 忽略坏标记 */ }
+      return m;
+    });
+  return { text: out.replace(/\n{3,}/g, '\n\n').trimEnd() + '\n', removed };
+}
+
 function sanitizeTitle(value) {
   return String(value || '').replace(/[\r\n#]+/g, ' ').replace(/\s+/g, ' ').trim();
 }
