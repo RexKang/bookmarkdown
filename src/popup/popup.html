@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<style>
+  body { width: 280px; margin: 0; padding: 14px; background: #0f1218; color: #f2f4f8;
+         font: 13px/1.6 system-ui, "Microsoft YaHei", sans-serif; }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; margin-bottom: 8px; }
+  .brand i { width: 6px; height: 18px; border-radius: 2px; background: #e50914; display: inline-block; }
+  .status { color: #96a0b2; font-size: 12px; margin-bottom: 10px; min-height: 32px; }
+  button { width: 100%; border: 0; border-radius: 7px; padding: 8px 10px; margin-top: 6px;
+           background: #2965cc; color: #fff; font: inherit; cursor: pointer; }
+  button.secondary { background: #262d3c; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+</style>
+</head>
+<body>
+  <div class="brand"><i></i>BookmarkDown</div>
+  <div class="status" id="status">检查中…</div>
+  <button id="collect" disabled>收藏当前页面</button>
+  <button id="open" class="secondary">打开库</button>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

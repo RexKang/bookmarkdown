@@ -80,6 +80,17 @@ export function appendEntry(text, block) {
   return `${String(text).replace(/\s+$/, '')}\n\n${block}\n`;
 }
 
+/** 从条目正文中提取纯笔记（剥掉标题、元数据行与封面行） */
+export function extractNote(body) {
+  return String(body)
+    .split(/\r?\n/)
+    .filter(line => !/^##\s/.test(line)
+      && !/^-\s*(URL|平台|视频 ID|作者|时长|状态|收藏于|标签)\s*[:：]/.test(line)
+      && !/^!\[封面\]\(/.test(line))
+    .join('\n')
+    .trim();
+}
+
 /** 解析 index.md → 合集清单 [{ id, title, file, parent, order }] */
 export function parseTopics(indexText) {
   const out = [];

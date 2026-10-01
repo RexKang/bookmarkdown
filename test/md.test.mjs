@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import {
   parseEntries, findEntry, findEntryByUrl, renderEntry,
-  replaceEntry, removeEntry, appendEntry, parseTopics, upsertTopic,
+  replaceEntry, removeEntry, appendEntry, extractNote, parseTopics, upsertTopic,
 } from '../src/lib/md.js';
 import { normalizeUrl, safeStem, nowStamp } from '../src/lib/util.js';
 
@@ -38,6 +38,7 @@ entries = parseEntries(text);
 ok(entries.length === 3, '共 3 个条目');
 ok(entries[1].key === 'url:https://example.com/watch?v=abc', '无 vid 用归一化 URL 作键（去掉 utm_source）');
 ok(entries[2].body.includes('我的笔记一行'), '笔记并入区块');
+ok(extractNote(entries[2].body) === '我的笔记一行', 'extractNote 从区块提取笔记');
 ok(findEntry(text, 'vid:demo1234567')?.meta.platform === 'youtube', '按 key 查到条目');
 ok(findEntryByUrl(text, 'https://example.com/watch?v=abc&utm_medium=y')?.key === entries[1].key, '按 URL（含跟踪参数差异）查到同一条');
 
