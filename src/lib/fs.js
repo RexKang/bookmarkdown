@@ -150,7 +150,8 @@ function mapPlatform(p) {
 
 /**
  * 保存一条收藏（写盘 + 去重 + 封面落盘）。
- * record: { title, url, vid, platform, author, duration, coverBlob(Blob|null), note }
+ * record: { title, url, vid, platform, author, duration, coverBlob(Blob|null), note, targetFile }
+ * targetFile: 新条目写入的文件（补票表单「写入当前合集」用；缺省默认容器）
  * 返回: { state: 'saved' | 'duplicate', file, key, thumbnail, upgraded? }
  */
 export async function saveCapture(root, record) {
@@ -207,8 +208,10 @@ export async function saveCapture(root, record) {
     return { state: 'saved', file: existingFile, key, thumbnail, upgraded: true };
   }
 
-  const inbox = await inboxFile(root);
-  const inboxText = (await readTextFile(root, inbox)) ?? `# ${inbox.replace(/\.md$/i, '')}\n`;
-  await writeFile(root, inbox, appendEntry(inboxText, block));
-  return { state: 'saved', file: inbox, key, thumbnail };
+  let target = record.targetFile || null;
+  if (target && (await readTextFile(root, target)) === null) target = null;
+  const file = target || await inboxFile(root);
+  const text = (await readTextFile(root, file)) ?? `# ${file.replace(/\.md$/i, '')}\n`;
+  await writeFile(root, file, appendEntry(text, block));
+  return { state: 'saved', file, key, thumbnail };
 }

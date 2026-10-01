@@ -100,6 +100,20 @@ ok(Array.isArray(st.excludedPatterns) && st.excludedPatterns.length > 0, '默认
 ok(await isExcludedBySettings('chrome://extensions', root) === true, 'chrome:// 命中排除');
 ok(await isExcludedBySettings('https://example.com/x', root) === false, '普通页面不排除');
 
+console.log('· 指定目标合集写入（补票表单）');
+const r5 = await saveCapture(root, {
+  title: '手填条目', url: 'https://example.com/manual', platform: 'web', coverBlob: null,
+  targetFile: '散装.md',
+});
+ok(r5.state === 'saved' && r5.file === '散装.md', '写入指定合集文件');
+ok(parseEntries(root.map.get('散装.md')._content).some(e => e.meta.key === 'url:https://example.com/manual'), '条目落在目标文件里');
+ok(parseEntries(root.map.get('默认.md')._content).length === 2, '默认容器未受影响');
+const r6 = await saveCapture(root, {
+  title: '手填条目二', url: 'https://example.com/manual2', platform: 'web', coverBlob: null,
+  targetFile: '不存在的合集.md',
+});
+ok(r6.state === 'saved' && r6.file === '默认.md', '目标文件不存在时回落默认容器');
+
 console.log('· 旧库迁移（收件箱 → 默认）');
 const legacy = new FakeDir();
 const lIdx = new FakeFile('index.md');

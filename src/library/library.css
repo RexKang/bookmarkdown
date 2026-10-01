@@ -184,3 +184,20 @@ footer.statusbar { border-top: 1px solid #1c2230; padding: 10px 22px; color: #6d
 #vImg { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 #viewer::after { content: '点击任意处或按 Esc 关闭'; position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
   color: #ffffff8c; font-size: 12px; pointer-events: none; }
+
+/* ---- 补票表单（添加条目） ---- */
+.dlg-form { width: min(600px, 92vw); }
+.dlg-form h3 { margin: 0 0 2px; font-size: 15px; }
+.fhint { color: #8f98aa; font-size: 12px; margin: 0 0 10px 58px; }
+.frow { display: flex; gap: 10px; align-items: center; margin: 10px 0; }
+.frow > label { width: 48px; flex: none; text-align: right; color: #8f98aa; font-size: 13px; }
+.frow > input { flex: 1; min-width: 0; background: #0e1119; border: 1px solid #2a3245; border-radius: 6px;
+                color: #e7ebf3; padding: 8px 10px; font-size: 13px; outline: none; }
+.frow > input:focus { border-color: #3a4a6b; }
+.afpick { flex: 1; display: flex; align-items: center; gap: 12px; border: 1px dashed #30384a;
+          border-radius: 8px; padding: 8px; cursor: pointer; min-width: 0; }
+.afpick.over { border-color: #4a5a7a; background: #11151f; }
+.afthumb { width: 132px; height: 74px; border-radius: 6px; overflow: hidden; background: #131722;
+           display: flex; align-items: center; justify-content: center; flex: none; }
+.afthumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+#afNoimg { color: #6f7890; font-size: 11px; text-align: center; line-height: 1.5; padding: 0 6px; }

@@ -53,6 +53,7 @@
       </div>
     </header>
     <div class="opbar">
+      <button id="btnAdd" class="secondary">＋ 添加条目</button>
       <button id="btnAuthor">批量设作者</button>
       <button id="btnColl" class="secondary">加入合集</button>
       <button id="btnDelEntry" class="secondary" disabled>删除选中</button>
@@ -104,6 +105,27 @@
 
 <!-- 全屏看图 -->
 <div id="viewer" hidden><img id="vImg" alt=""></div>
+
+<!-- 添加条目（补票表单） -->
+<div id="addform" class="modal" hidden>
+  <div class="dialog dlg-form">
+    <h3>添加条目</h3>
+    <div class="fhint" id="afTarget">保存到：默认</div>
+    <div class="frow"><label>链接</label><input id="afUrl" placeholder="https://…（必填）"></div>
+    <div class="frow"><label>标题</label><input id="afTitle" placeholder="选填；不填时显示域名"></div>
+    <div class="frow"><label>封面</label>
+      <div class="afpick" id="afPick" title="点击选择图片，也可直接粘贴或拖入">
+        <div class="afthumb"><img id="afPrev" alt="" hidden><span id="afNoimg">点击选择 / 粘贴 / 拖入图片</span></div>
+        <button id="afClear" class="secondary" hidden>移除图片</button>
+      </div>
+    </div>
+    <input type="file" id="afFile" accept="image/*" hidden>
+    <div class="mbtn">
+      <button id="afSave">保存</button>
+      <button id="afCancel" class="secondary">取消</button>
+    </div>
+  </div>
+</div>
 
 <!-- 确认框 / toast -->
 <div id="modal" class="modal" hidden>

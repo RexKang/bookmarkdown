@@ -5,7 +5,7 @@
 import { getRootHandle, setRootHandle, idbGet, idbSet } from '../lib/idb.js';
 import {
   ensureLibrary, listCollectionFiles, readTextFile, writeFile,
-  readIndexTopics, INDEX_FILE, INBOX_ID,
+  readIndexTopics, INDEX_FILE, INBOX_ID, saveCapture,
 } from '../lib/fs.js';
 import {
   parseEntries, renderEntry, replaceEntry, removeEntry, appendEntry,
@@ -200,6 +200,7 @@ function renderTopbar() {
 function renderOpbar() {
   const isWall = state.view === 'wall';
   const isColl = state.view === 'collections';
+  $('btnAdd').hidden = !isWall;
   $('btnAuthor').hidden = !isWall;
   $('btnColl').hidden = !isWall;
   $('btnDelEntry').hidden = !isWall;
@@ -241,7 +242,7 @@ function renderWall(c) {
   const list = visibleEntries();
   if (!list.length) {
     const hint = !state.collection
-      ? '还没有收藏——在任意网页右键 →「收藏到 BookmarkDown」。'
+      ? '还没有收藏——在任意网页右键「收藏到 BookmarkDown」，或点上方「＋ 添加条目」手动补录。'
       : state.collection === state.inboxFile
         ? '「默认」里还没有条目——新收藏会先落到这里。'
         : '该合集还没有条目——在别的合集勾选条目，用「加入合集」挪进来。';
@@ -556,6 +557,94 @@ $('dCover').addEventListener('click', () => {
 });
 $('viewer').addEventListener('click', closeViewer);
 
+// ---------------- 补票表单（添加条目） ----------------
+let afBlob = null;
+let afPreviewUrl = null;
+
+function setAfImage(blob) {
+  afBlob = blob || null;
+  const img = $('afPrev');
+  if (afPreviewUrl) { URL.revokeObjectURL(afPreviewUrl); afPreviewUrl = null; }
+  if (afBlob) {
+    afPreviewUrl = URL.createObjectURL(afBlob);
+    img.src = afPreviewUrl;
+    img.hidden = false;
+    $('afNoimg').hidden = true;
+    $('afClear').hidden = false;
+  } else {
+    img.hidden = true;
+    img.removeAttribute('src');
+    $('afNoimg').hidden = false;
+    $('afClear').hidden = true;
+  }
+}
+
+function openAddForm() {
+  $('addform').hidden = false;
+  $('afUrl').value = '';
+  $('afTitle').value = '';
+  $('afTarget').textContent = '保存到：' + (state.collection ? collectionTitle(state.collection) : '默认');
+  setAfImage(null);
+  setTimeout(() => $('afUrl').focus(), 60);
+}
+
+function closeAddForm() {
+  $('addform').hidden = true;
+  setAfImage(null);
+}
+
+$('btnAdd').addEventListener('click', openAddForm);
+$('afCancel').addEventListener('click', closeAddForm);
+$('addform').addEventListener('click', ev => { if (ev.target.id === 'addform') closeAddForm(); });
+$('afPick').addEventListener('click', ev => { if (!ev.target.closest('#afClear')) $('afFile').click(); });
+$('afClear').addEventListener('click', ev => { ev.stopPropagation(); setAfImage(null); });
+$('afFile').addEventListener('change', () => {
+  const f = $('afFile').files && $('afFile').files[0];
+  if (f) setAfImage(f);
+  $('afFile').value = '';
+});
+document.addEventListener('paste', ev => {
+  if ($('addform').hidden) return;
+  const item = [...(ev.clipboardData?.items || [])].find(it => it.type.startsWith('image/'));
+  if (!item) return; // 文本粘贴放行（填链接用）
+  const blob = item.getAsFile();
+  if (blob) { ev.preventDefault(); setAfImage(blob); }
+});
+const afPickEl = $('afPick');
+afPickEl.addEventListener('dragover', ev => { ev.preventDefault(); afPickEl.classList.add('over'); });
+afPickEl.addEventListener('dragleave', () => afPickEl.classList.remove('over'));
+afPickEl.addEventListener('drop', ev => {
+  ev.preventDefault();
+  afPickEl.classList.remove('over');
+  const f = [...(ev.dataTransfer?.files || [])].find(x => x.type.startsWith('image/'));
+  if (f) setAfImage(f);
+});
+for (const id of ['afUrl', 'afTitle']) {
+  $(id).addEventListener('keydown', ev => { if (ev.key === 'Enter') $('afSave').click(); });
+}
+$('afSave').addEventListener('click', async () => {
+  let url = $('afUrl').value.trim();
+  if (!url) { toast('链接必填'); $('afUrl').focus(); return; }
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(url)) url = 'https://' + url;
+  const title = $('afTitle').value.trim();
+  $('afSave').disabled = true;
+  try {
+    const result = await saveCapture(state.root, {
+      title, url, platform: 'web', coverBlob: afBlob,
+      targetFile: state.collection || null,
+    });
+    closeAddForm();
+    await reloadData();
+    toast(result.state === 'duplicate'
+      ? '已在库中：' + (title || url).slice(0, 32)
+      : result.upgraded ? '已为已有条目补上封面'
+      : '已添加 · ' + String(result.file || '').replace(/\.md$/i, ''));
+  } catch (e) {
+    toast('保存失败：' + String(e.message || e).slice(0, 60));
+  }
+  $('afSave').disabled = false;
+});
+
 $('dOpen').addEventListener('click', () => {
   const url = detailEntry?.meta?.url;
   if (url) chrome.tabs.create({ url }).catch(() => window.open(url, '_blank'));
@@ -573,6 +662,7 @@ $('dDel').addEventListener('click', () => {
 $('detail').addEventListener('click', ev => { if (ev.target.id === 'detail') closeDetail(); });
 document.addEventListener('keydown', ev => {
   if (ev.key !== 'Escape') return;
+  if (!$('addform').hidden) { closeAddForm(); return; }
   if (!$('viewer').hidden) { closeViewer(); return; }
   closeDetail();
   $('modal').hidden = true;
