@@ -1,150 +1,96 @@
-# 📚 BookmarkDown
+# BookmarkDown
 
-> **把书签存为 Markdown，把数据握在自己手中。**
+本地优先的视频收藏「海报墙」——Chrome 扩展（Manifest V3）。
 
-**BookmarkDown** 是一个本地优先（Local-first）的书签管理工具。它不像传统书签管理器那样使用封闭数据库，而是将每一条书签直接保存为一个独立的 `.md` 文件，配以本地图片。你的数据永远只是**普通文件**，永远可读、可迁移、可版本控制（Git）。
+看到喜欢的视频，右键一键收藏；每条收藏都写进**你自己磁盘上的 Markdown 文件**，封面存为 WebP 快照。数据可直接用 Obsidian 打开、用 git 版本管理，不依赖任何云服务、数据库或账号。
 
-![BookmarkDown 界面预览](https://via.placeholder.com/800x400?text=BookmarkDown+UI+Preview)
+[English README →](README.en.md)
 
----
+## 特性（v0.1.0）
 
-## ✨ 核心特性
+- **一键收藏**：任意网页右键「收藏到 BookmarkDown」；也支持右键图片 / 右键链接
+- **元数据抓取**：B 站 / YouTube 深度适配（标题、UP 主、时长），其他网站走 og 标签通用兜底
+- **封面双通道**：优先页面内直接获取；失败自动截取可见区域兜底；统一压缩为 ≤640px WebP
+- **零 host_permissions**：安装时没有任何权限警告；仅在收藏的一瞬间通过 activeTab 向当前页面借一次临时授权
+- **海报墙**：左栏导航（墙 / 默认 / 合集 / 设置），网格 / 列表双视图，搜索、状态筛选、合集归类
+- **批量整理**：批量设作者、加入合集、删除（均带确认）、点状态循环（想看 / 在看 / 看过）
+- **详情卡**：点条目查看详情；点封面全屏看图（点击任意处 / Esc 返回）
+- **补票表单**：抓不到的内容（App 里看到的、canvas、受限页面）用「＋ 添加条目」手动补录：链接 + 粘贴 / 拖入图片
+- **去重**：同一视频 / 链接重复收藏会被识别（已有条目可补封面升级）
 
-- 📝 **纯 Markdown 存储**：每个书签都是一个独立的 `.md` 文件，包含 Frontmatter（元数据）和正文（笔记）。
-- 🖼️ **本地图片管理**：缩略图和附件随书签一起保存在本地文件夹中，不依赖图床，永不失效。
-- 🎴 **卡片式展示**：在网页中以网格卡片形式展示书签，标题、缩略图、描述一目了然。
-- ✏️ **内联编辑与富文本**：支持在管理界面中直接编辑标题、缩略图、标签和正文内容（所见即所得或 Markdown 源码）。
-- 🔍 **搜索与筛选**：按标题、标签或正文内容快速定位书签。
-- 🏠 **完全离线**：无需互联网连接，无需注册账户，数据仅存在于你的磁盘上。
-- 🔓 **零锁定（Zero Lock-in）**：即使停止使用本工具，你的数据依然是标准的 Markdown 和图片文件，可用任何文本编辑器打开。
+## 库结构
 
----
-
-## 🗂️ 数据架构（如何存储？）
-
-项目采用最朴素的文件夹结构，所有数据一目了然：
+选一个文件夹作为「库」，**建议 git init 并定期提交**——这就是你的收藏备份方案：
 
 ```
-BookmarkDown/
-├── data/                         # 数据根目录
-│   ├── bookmarks/               # 存放所有书签的 .md 文件
-│   │   ├── 如何学习Python.md
-│   │   ├── 2026年度技术趋势.md
-│   │   └── 设计资源导航.md
-│   └── images/                  # 存放所有本地图片
-│       ├── python-cover.png
-│       ├── tech-trends.jpg
-│       └── design-tools.png
-├── index.html                   # 前端管理界面
-├── app.js                       # 核心业务逻辑
-└── style.css                    # 界面样式
+库/
+├── index.md            # 合集清单（含「默认」容器登记）
+├── 默认.md             # 默认容器：新收藏先落这里
+├── 硬件.md             # 每个合集 = 一个 Markdown 文件
+├── thumbnails/
+│   └── BV1zmYP6aEdH.webp
+└── settings.json       # 排除规则
 ```
 
-**单个书签文件（.md）示例：**
+每条收藏是 Markdown 里的一个区块：隐藏 JSON（元数据）+ 小节正文，对 Obsidian 与 git diff 都友好：
 
 ```markdown
----
-title: 如何高效学习 Python
-url: https://example.com/python-guide
-thumbnail: /data/images/python-cover.png
-tags:
-  - 编程
-  - Python
-  - 教程
-created: 2026-09-09
----
+<!-- bookmarkdown-entry {"key":"vid:BV1zmYP6aEdH","title":"…","url":"https://www.bilibili.com/video/BV1zmYP6aEdH/","platform":"bilibili","author":"…","duration":713,"thumbnail":"thumbnails/BV1zmYP6aEdH.webp","status":"想看","collected":"2026-10-01 19:02"} -->
+## （标题）
 
-这是一份非常全面的 Python 学习路线图，涵盖了从基础语法到项目实战的全部内容。
+- URL: https://www.bilibili.com/video/BV1zmYP6aEdH/
+- 平台: bilibili
+- 作者: …
+- 时长: 713 秒
+- 状态: 想看
+- 收藏于: 2026-10-01 19:02
 
-## 我的学习笔记
-- 第一周：熟悉基础语法
-- 第二周：学习常用库（requests, pandas）
-- 推荐配合《Python 编程：从入门到实践》这本书一起看。
+![封面](thumbnails/BV1zmYP6aEdH.webp)
+<!-- /bookmarkdown-entry -->
 ```
 
----
+## 安装（开发版）
 
-## 🚀 快速开始
+尚未上架应用商店，以开发者模式加载：
 
-### 方式一：使用 Node.js 本地服务器（推荐）
+1. clone / 下载本仓库
+2. 打开 `chrome://extensions`，开启右上角「开发者模式」
+3. 点「加载已解压的扩展程序」，选择仓库根目录（含 `manifest.json` 的那一层）
+4. 点扩展图标 →「打开库」→ 选择一个文件夹作为库目录
 
-这种方式提供完整的后端 API，支持文件读写、图片上传等所有功能。
+> 浏览器重启后需在库页点一次「解锁库」重新授权；授权弹窗里选「每次访问都允许」可减少后续提示。
+
+要求：Chrome / Edge（Chromium 内核）≥ 122。
+
+## 使用
+
+- **收藏**：视频页 / 任意网页右键 →「收藏到 BookmarkDown」，扩展图标出现 ✓ 徽标即成功
+- **整理**：勾选条目 → 批量设作者 / 加入合集 / 删除；点条目卡片 → 详情卡；点封面 → 全屏看图
+- **补票**：「＋ 添加条目」手动补录（在合集内打开则保存进当前合集）
+- **排除规则**：不想被收藏的站点，编辑库里的 `settings.json`
+
+## 开发与测试
+
+无构建步骤、无运行时依赖，源码即产物（原生 ES Modules）：
 
 ```bash
-# 1. 克隆仓库
-git clone https://github.com/RexKang/bookmarkdown.git
-cd bookmarkdown
-
-# 2. 安装依赖
-npm install
-
-# 3. 启动本地服务
-npm start
-
-# 4. 在浏览器中打开
-# 访问 http://localhost:3000
+node test/md.test.mjs   # 文本层：条目 / 合集解析、增删改
+node test/fs.test.mjs   # 存储层：库初始化、去重、目标合集写入（内存假目录）
 ```
 
-### 方式二：纯前端模式（轻量级）
+## 隐私
 
-如果你不想安装任何后端环境，可以使用浏览器的 `File System Access API` 直接打开文件夹。**注意**：此模式下部分功能（如自动文件写入）受浏览器安全策略限制，适合只读浏览或技术预览。
+- 数据只写进你选择的本地文件夹；扩展不发起任何上传，无遥测、无账号
+- 无 host_permissions：仅在你右键收藏 / 点击图标时，借 activeTab 临时授权访问当前标签页
+- 封面获取在页面上下文内完成，不经过第三方服务
 
-```bash
-# 直接双击 index.html 或在浏览器中打开
-# 然后通过“打开文件夹”按钮定位到你的数据目录
-```
+## 路线图
 
----
+- **v0.1.0（当前）**：右键采集、封面双通道、Markdown 文件库、海报墙、详情卡、补票表单
+- v0.2：库内编辑（标题 / 标签 / 笔记）+ Markdown 渲染、链接后台补抓、popup 快搜
+- v0.3：B 站收藏夹批量导入、失效链接检测、导出静态 HTML
+- v1.0：应用商店上架、多库、稳定性打磨
 
-## 🛠️ 技术栈
+## 许可
 
-| 模块 | 技术选型 | 说明 |
-| :--- | :--- | :--- |
-| **后端** | Node.js + Express | 提供 RESTful API，处理文件读写 |
-| **前端** | Vanilla JS + HTML5 + CSS3 | 无重型框架，极致轻量，易于二次开发 |
-| **Markdown 解析** | `marked` / `markdown-it` | 将 `.md` 渲染为 HTML，支持 GFM 语法 |
-| **元数据解析** | `gray-matter` | 解析 Markdown 中的 YAML Frontmatter |
-| **图片处理** | `multer` (上传) + `sharp` (可选压缩) | 处理图片存储和缩略图生成 |
-
----
-
-## 🎯 开发路线图（Roadmap）
-
-- [x] **Phase 1：基础架构**
-  - [x] 定义数据存储结构（Markdown + 图片）
-  - [x] 实现书签列表的卡片渲染
-  - [x] 实现静态文件服务
-
-- [ ] **Phase 2：核心功能**
-  - [ ] 添加书签（自动生成 .md 文件）
-  - [ ] 编辑书签（标题、URL、缩略图、正文）
-  - [ ] 删除书签（同时删除关联图片）
-  - [ ] 图片上传与本地存储
-
-- [ ] **Phase 3：体验优化**
-  - [ ] 实时搜索与标签过滤
-  - [ ] 导入/导出（HTML 书签、JSON）
-  - [ ] 从网页自动抓取元数据（Open Graph）
-
-- [ ] **Phase 4：扩展生态**
-  - [ ] 浏览器扩展（一键保存当前页面）
-  - [ ] 暗色主题
-  - [ ] 全文检索（基于 Markdown 内容）
-
----
-
-## 🤝 贡献与反馈
-
-BookmarkDown 完全开源，欢迎提交 Issue 和 Pull Request！
-
-如果你有好的想法或遇到了 Bug，请直接在本仓库的 [Issues](https://github.com/RexKang/bookmarkdown/issues) 中提出。
-
----
-
-## 📄 许可证
-
-[AGPL-3.0 License](LICENSE) © 2026 RexKang
-
----
-
-> **“数据即文件，自由即主权。”**
+[AGPL-3.0](LICENSE) © 2026 RexKang
