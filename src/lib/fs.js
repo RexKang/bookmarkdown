@@ -4,7 +4,7 @@
 
 import {
   parseEntries, renderEntry, appendEntry, replaceEntry, extractNote,
-  parseTopics, upsertTopic,
+  parseTopics, upsertTopic, removeTopic,
 } from './md.js';
 import { normalizeUrl, entryKey, safeStem, nowStamp } from './util.js';
 
@@ -12,7 +12,8 @@ export const INDEX_FILE = 'index.md';
 export const SETTINGS_FILE = 'settings.json';
 export const THUMB_DIR = 'thumbnails';
 export const INBOX_ID = 'inbox';
-export const DEFAULT_INBOX_FILE = '收件箱.md';
+export const INBOX_TITLE = '默认';
+export const DEFAULT_INBOX_FILE = '默认.md';
 
 export const DEFAULT_EXCLUDES = [
   'chrome://*', 'chrome-extension://*', 'edge://*', 'about:*',
@@ -45,24 +46,40 @@ export async function readIndexTopics(root) {
   return parseTopics(await readIndexRaw(root));
 }
 
-/** 收件箱文件：由 index.md 的 inbox 主题决定，缺省 收件箱.md */
+/** 默认容器文件：由 index.md 的 inbox 主题决定，缺省 默认.md */
 export async function inboxFile(root) {
   const topics = await readIndexTopics(root);
   return topics.find(t => t.id === INBOX_ID)?.file || DEFAULT_INBOX_FILE;
 }
 
-/** 初始化/修复库：确保 index.md 有收件箱主题、收件箱文件存在 */
+/** 初始化/修复库：确保 index.md 有「默认」容器、默认文件存在；旧库（收件箱）自动迁移 */
 export async function ensureLibrary(root) {
   const topics = await readIndexTopics(root);
-  if (!topics.some(t => t.id === INBOX_ID)) {
+  const inboxTopic = topics.find(t => t.id === INBOX_ID);
+  if (inboxTopic && (inboxTopic.title !== INBOX_TITLE || inboxTopic.file !== DEFAULT_INBOX_FILE)) {
+    // 旧版兼容：标题「收件箱」/文件「收件箱.md」→「默认」/「默认.md」
+    const oldFile = inboxTopic.file;
+    const oldText = oldFile ? await readTextFile(root, oldFile) : null;
+    if (oldText !== null && (await readTextFile(root, DEFAULT_INBOX_FILE)) === null) {
+      await writeFile(root, DEFAULT_INBOX_FILE, oldText);
+    }
+    if (oldText !== null && oldFile !== INDEX_FILE && /\.md$/i.test(oldFile)) {
+      try { await root.removeEntry(oldFile); } catch (_) { /* 删不掉就留着 */ }
+    }
+    let idx = await readIndexRaw(root);
+    idx = removeTopic(idx, { id: INBOX_ID }).text;
+    idx = upsertTopic(idx, { ...inboxTopic, title: INBOX_TITLE, file: DEFAULT_INBOX_FILE }).text;
+    await writeFile(root, INDEX_FILE, idx);
+  }
+  if (!(await readIndexTopics(root)).some(t => t.id === INBOX_ID)) {
     const { text } = upsertTopic(await readIndexRaw(root), {
-      id: INBOX_ID, title: '收件箱', file: DEFAULT_INBOX_FILE, parent: null, order: 0,
+      id: INBOX_ID, title: INBOX_TITLE, file: DEFAULT_INBOX_FILE, parent: null, order: 0,
     });
     await writeFile(root, INDEX_FILE, text);
   }
   const inbox = await inboxFile(root);
   if ((await readTextFile(root, inbox)) === null) {
-    await writeFile(root, inbox, `# ${inbox.replace(/\.md$/i, '')}\n`);
+    await writeFile(root, inbox, `# ${INBOX_TITLE}\n`);
   }
   return { inbox };
 }

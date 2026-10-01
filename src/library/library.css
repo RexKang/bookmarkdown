@@ -32,6 +32,8 @@ aside.side { width: 208px; flex: none; background: #0d1017; border-right: 1px so
 .navitem:hover { background: #141a26; color: #cfd6e2; }
 .navitem.on { background: #1a2130; color: #fff; border-left-color: #e50914; }
 .navitem .ic { width: 18px; text-align: center; flex: none; }
+.navitem .cnt { margin-left: auto; color: #5d6675; font-size: 11px; font-weight: 500; }
+.navitem.on .cnt { color: #aab4c6; }
 .collistp { display: flex; flex-direction: column; gap: 1px; padding: 2px 0 6px; }
 .subitem { display: flex; align-items: center; justify-content: space-between; gap: 8px;
            padding: 6.5px 12px 6.5px 40px; border-radius: 7px; color: #8d96a8; font-size: 12.5px;

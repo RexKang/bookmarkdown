@@ -23,7 +23,7 @@ const state = {
   root: null,
   files: [],          // [{ file, title }]
   entries: [],        // [{ file, fileTitle, key, meta }]
-  inboxFile: '收件箱.md',
+  inboxFile: '默认.md',
   view: 'wall',       // wall | collections | settings
   mode: 'grid',       // grid | list
   collection: null,   // null = 全部；否则合集文件名
@@ -165,7 +165,7 @@ function renderAll() {
 function renderSidebar() {
   const counts = new Map();
   for (const e of state.entries) counts.set(e.file, (counts.get(e.file) || 0) + 1);
-  $('collist').innerHTML = state.files.map(f =>
+  $('collist').innerHTML = collectionFiles().map(f =>
     `<div class="subitem${state.view === 'wall' && state.collection === f.file ? ' on' : ''}" data-file="${escapeHtml(f.file)}">` +
     `<span>${escapeHtml(f.title)}</span><b>${counts.get(f.file) || 0}</b></div>`).join('');
   $('collist').querySelectorAll('.subitem').forEach(el => el.addEventListener('click', () => {
@@ -174,10 +174,17 @@ function renderSidebar() {
     state.selEntries.clear();
     renderAll();
   }));
-  $('navWall').classList.toggle('on', state.view === 'wall');
+  $('navWall').classList.toggle('on', state.view === 'wall' && state.collection === null);
+  $('navInbox').classList.toggle('on', state.view === 'wall' && state.collection === state.inboxFile);
+  $('inboxCount').textContent = counts.get(state.inboxFile) || 0;
   $('navColl').classList.toggle('on', state.view === 'collections');
   $('navSet').classList.toggle('on', state.view === 'settings');
   $('sideinfo').textContent = '库：' + state.root.name;
+}
+
+/** 合集文件（不含「默认」容器） */
+function collectionFiles() {
+  return state.files.filter(f => f.file !== state.inboxFile);
 }
 
 function renderTopbar() {
@@ -220,22 +227,25 @@ function renderContent() {
     $('vtCount').textContent = visibleEntries().length + ' 条';
   } else if (state.view === 'collections') {
     $('vtName').textContent = '合集';
-    $('vtCount').textContent = state.files.length + ' 个';
+    $('vtCount').textContent = collectionFiles().length + ' 个';
   } else {
     $('vtName').textContent = '设置';
     $('vtCount').textContent = '';
   }
   $('ftCount').textContent = '共 ' + state.entries.length + ' 条';
-  $('ftColls').textContent = '合集 ' + state.files.length + ' 个';
+  $('ftColls').textContent = '合集 ' + collectionFiles().length + ' 个';
   $('ftLib').textContent = '库：' + state.root.name;
 }
 
 function renderWall(c) {
   const list = visibleEntries();
   if (!list.length) {
-    c.innerHTML = '<div class="emptyhint">' + (state.collection
-      ? '该合集还没有条目——在别的合集勾选条目，用「加入合集」挪进来。'
-      : '还没有收藏——在任意网页右键 →「收藏到 BookmarkDown」。') + '</div>';
+    const hint = !state.collection
+      ? '还没有收藏——在任意网页右键 →「收藏到 BookmarkDown」。'
+      : state.collection === state.inboxFile
+        ? '「默认」里还没有条目——新收藏会先落到这里。'
+        : '该合集还没有条目——在别的合集勾选条目，用「加入合集」挪进来。';
+    c.innerHTML = '<div class="emptyhint">' + hint + '</div>';
     return;
   }
   c.innerHTML = state.mode === 'grid' ? gridHtml(list) : listHtml(list);
@@ -312,7 +322,7 @@ function bindWallEvents(c) {
 function renderCollections(c) {
   const countOf = f => state.entries.filter(e => e.file === f).length;
   const firstCover = f => state.entries.find(e => e.file === f && e.meta.thumbnail)?.meta.thumbnail || null;
-  c.innerHTML = '<div class="cgrid">' + state.files.map(f => `
+  c.innerHTML = '<div class="cgrid">' + collectionFiles().map(f => `
  <div class="ccard" data-file="${escapeHtml(f.file)}">
   <div class="ccover">
    <label class="pick"><input type="checkbox" class="collpick" data-file="${escapeHtml(f.file)}" ${state.selColls.has(f.file) ? 'checked' : ''}></label>
@@ -323,7 +333,7 @@ function renderCollections(c) {
   </div>
   <div class="cbody">
    <div class="cname">${escapeHtml(f.title)}</div>
-   <div class="cmeta2">${escapeHtml(f.file)}${f.file === state.inboxFile ? ' · 默认收件箱' : ''}</div>
+   <div class="cmeta2">${escapeHtml(f.file)}</div>
   </div>
  </div>`).join('') + '<div class="ccard newcard" id="newCard">＋ 新建合集</div></div>';
 
@@ -349,7 +359,7 @@ function renderSettings(c) {
   c.innerHTML = `
  <div style="max-width:680px">
   <div class="setrow">库目录：<b>${escapeHtml(state.root.name)}</b>　<span class="hint">（浏览器安全限制不提供完整路径）</span></div>
-  <div class="setrow">条目：<b>${state.entries.length}</b> 条 ｜ 合集：<b>${state.files.length}</b> 个</div>
+  <div class="setrow">条目：<b>${state.entries.length}</b> 条 ｜ 合集：<b>${collectionFiles().length}</b> 个</div>
   <div class="setrow">数据形态：Markdown 条目 + <code>thumbnails/</code> 封面快照　<span class="hint">建议给库目录建 git 仓库留底</span></div>
   <div class="setrow">更换库目录：<button id="repick" class="secondary" style="margin-left:10px">重新选择目录…</button></div>
  </div>`;
@@ -459,7 +469,7 @@ async function deleteSelectedEntries() {
 async function deleteSelectedColls() {
   const files = [...state.selColls];
   const deletable = files.filter(f => f !== state.inboxFile);
-  if (deletable.length !== files.length) toast('收件箱不能删除');
+  if (deletable.length !== files.length) toast('「默认」不能删除');
   for (const file of deletable) {
     const text = (await readTextFile(state.root, file)) ?? '';
     const blocks = parseEntries(text).map(e => renderEntry(e.meta, extractNote(e.body)));
@@ -504,6 +514,7 @@ $('segView').querySelectorAll('span').forEach(sp => sp.addEventListener('click',
   renderContent();
 }));
 $('navWall').addEventListener('click', () => { state.view = 'wall'; state.collection = null; renderAll(); });
+$('navInbox').addEventListener('click', () => { state.view = 'wall'; state.collection = state.inboxFile; state.selEntries.clear(); renderAll(); });
 $('navColl').addEventListener('click', () => { state.view = 'collections'; renderAll(); });
 $('navSet').addEventListener('click', () => { state.view = 'settings'; renderAll(); });
 
@@ -575,7 +586,7 @@ $('btnDelColl').addEventListener('click', () => {
   const cnt = files.reduce((s, f) => s + state.entries.filter(e => e.file === f).length, 0);
   confirmBox({
     title: '删除合集',
-    text: `删除 ${names}？\n对应 .md 文件将从库中移出；其中 ${cnt} 条记录会移入收件箱（不会直接丢失）。`,
+    text: `删除 ${names}？\n对应 .md 文件将从库中移出；其中 ${cnt} 条记录会移入「默认」（不会直接丢失）。`,
     onOk: deleteSelectedColls,
   });
 });
