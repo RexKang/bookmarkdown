@@ -298,6 +298,16 @@ function listHtml(list) {
 }
 
 function bindWallEvents(c) {
+  c.querySelectorAll('.card').forEach(card => card.addEventListener('click', ev => {
+    if (ev.target.closest('.pick') || ev.target.closest('[data-stkey]')) return;
+    const entry = state.entries.find(x => x.key === card.dataset.key);
+    if (entry) openDetail(entry);
+  }));
+  c.querySelectorAll('tr[data-key]').forEach(tr => tr.addEventListener('click', ev => {
+    if (ev.target.closest('.chk') || ev.target.closest('[data-stkey]')) return;
+    const entry = state.entries.find(x => x.key === tr.dataset.key);
+    if (entry) openDetail(entry);
+  }));
   c.querySelectorAll('.enpick').forEach(el => el.addEventListener('change', () => {
     el.checked ? state.selEntries.add(el.dataset.key) : state.selEntries.delete(el.dataset.key);
     renderOpbar();
@@ -452,8 +462,9 @@ async function moveSelectedTo(targetFile) {
   toast('已加入「' + collectionTitle(targetFile) + '」');
 }
 
-async function deleteSelectedEntries() {
-  const targets = state.entries.filter(e => state.selEntries.has(e.key));
+async function deleteEntries(keys) {
+  const keySet = new Set(keys);
+  const targets = state.entries.filter(e => keySet.has(e.key));
   for (const [file, list] of groupByFile(targets)) {
     let text = await readTextFile(state.root, file);
     if (text === null) continue;
@@ -464,6 +475,10 @@ async function deleteSelectedEntries() {
   state.selEntries.clear();
   await reloadData();
   toast('已删除 ' + targets.length + ' 条');
+}
+
+async function deleteSelectedEntries() {
+  await deleteEntries([...state.selEntries]);
 }
 
 async function deleteSelectedColls() {
@@ -488,6 +503,66 @@ async function deleteSelectedColls() {
   await reloadData();
   toast('已删除 ' + deletable.length + ' 个合集');
 }
+
+// ---------------- 详情卡 ----------------
+let detailEntry = null;
+
+async function openDetail(entry) {
+  detailEntry = entry;
+  const m = entry.meta;
+  const cover = m.thumbnail ? await coverUrl(m.thumbnail) : null;
+  const img = $('dCover');
+  const grad = $('dGrad');
+  if (cover) { img.src = cover; img.hidden = false; grad.hidden = true; }
+  else { img.hidden = true; grad.hidden = false; grad.textContent = PLATFORM_LABEL[m.platform] || ''; }
+  $('dTitle').textContent = m.title || m.url || '';
+  const rows = [
+    ['合集', entry.fileTitle],
+    ['平台', PLATFORM_LABEL[m.platform] || m.platform || ''],
+    ['作者', m.author || ''],
+    ['时长', fmtDuration(m.duration)],
+    ['状态', m.status || '想看'],
+    ['收藏于', m.collected || ''],
+    ['链接', m.url || ''],
+  ].filter(r => r[1]);
+  $('dRows').innerHTML = rows.map(([k, v]) => `<div class="drow"><b>${k}</b><span>${escapeHtml(v)}</span></div>`).join('');
+  let note = '';
+  try {
+    const text = await readTextFile(state.root, entry.file);
+    const fresh = text && parseEntries(text).find(x => x.key === entry.key);
+    if (fresh) note = extractNote(fresh.body);
+  } catch (_) {}
+  const noteEl = $('dNote');
+  noteEl.hidden = !note;
+  noteEl.textContent = note;
+  $('detail').hidden = false;
+}
+
+function closeDetail() {
+  $('detail').hidden = true;
+  detailEntry = null;
+}
+
+$('dOpen').addEventListener('click', () => {
+  const url = detailEntry?.meta?.url;
+  if (url) chrome.tabs.create({ url }).catch(() => window.open(url, '_blank'));
+});
+$('dClose').addEventListener('click', closeDetail);
+$('dDel').addEventListener('click', () => {
+  if (!detailEntry) return;
+  const e = detailEntry;
+  confirmBox({
+    title: '删除条目',
+    text: `删除「${String(e.meta.title || e.meta.url || '').slice(0, 40)}」？\n将从合集文件中移除对应区块，不可恢复（建议库目录用 git 留底）。`,
+    onOk: async () => { closeDetail(); await deleteEntries([e.key]); },
+  });
+});
+$('detail').addEventListener('click', ev => { if (ev.target.id === 'detail') closeDetail(); });
+document.addEventListener('keydown', ev => {
+  if (ev.key !== 'Escape') return;
+  closeDetail();
+  $('modal').hidden = true;
+});
 
 async function pickDirectory() {
   try {
