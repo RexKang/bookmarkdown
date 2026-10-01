@@ -162,9 +162,12 @@ footer.statusbar { border-top: 1px solid #1c2230; padding: 10px 22px; color: #6d
          font-size: 13px; box-shadow: 0 10px 40px #000b; z-index: 60; }
 
 /* ---- 详情卡 ---- */
-.dlg-detail { width: min(560px, 92vw); max-height: 88vh; overflow: auto; }
-.dcover { aspect-ratio: 16/9; border-radius: 8px; overflow: hidden; background: #131722; position: relative; margin-bottom: 12px; }
-.dcover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dlg-detail { width: min(720px, 94vw); max-height: 94vh; overflow: auto; }
+.dcover { border-radius: 8px; overflow: hidden; background: #0b0d12; position: relative; margin-bottom: 10px;
+          min-height: 200px; display: flex; align-items: center; justify-content: center; }
+.dcover img { width: 100%; max-height: 60vh; object-fit: contain; display: block; cursor: zoom-in; }
+.dcover:has(img:not([hidden]))::after { content: '点击图片全屏 ⤢'; position: absolute; right: 8px; bottom: 8px;
+  background: #000000a8; color: #dfe5ef; font-size: 11px; padding: 3px 8px; border-radius: 999px; pointer-events: none; }
 .dcover .grad { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
                 font-size: 26px; font-weight: 800; color: #ffffff26; letter-spacing: .12em; }
 .dlg-detail h3 { margin: 0 0 4px; font-size: 16px; line-height: 1.45; overflow-wrap: anywhere; }
@@ -175,3 +178,9 @@ footer.statusbar { border-top: 1px solid #1c2230; padding: 10px 22px; color: #6d
 .dnote { background: #0e1119; border: 1px solid #232b3a; border-radius: 8px; padding: 10px 12px; color: #aeb7c8;
          white-space: pre-wrap; font-size: 13px; margin: 0 0 12px; overflow-wrap: anywhere; }
 .recs tbody tr { cursor: pointer; }
+
+/* ---- 全屏看图 ---- */
+#viewer { position: fixed; inset: 0; z-index: 70; background: #05060af5; cursor: zoom-out; }
+#vImg { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+#viewer::after { content: '点击任意处或按 Esc 关闭'; position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+  color: #ffffff8c; font-size: 12px; pointer-events: none; }

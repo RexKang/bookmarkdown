@@ -543,6 +543,19 @@ function closeDetail() {
   detailEntry = null;
 }
 
+function openViewer(src) {
+  $('vImg').src = src;
+  $('viewer').hidden = false;
+}
+function closeViewer() {
+  $('viewer').hidden = true;
+  $('vImg').src = '';
+}
+$('dCover').addEventListener('click', () => {
+  if (!$('dCover').hidden && $('dCover').src) openViewer($('dCover').src);
+});
+$('viewer').addEventListener('click', closeViewer);
+
 $('dOpen').addEventListener('click', () => {
   const url = detailEntry?.meta?.url;
   if (url) chrome.tabs.create({ url }).catch(() => window.open(url, '_blank'));
@@ -560,6 +573,7 @@ $('dDel').addEventListener('click', () => {
 $('detail').addEventListener('click', ev => { if (ev.target.id === 'detail') closeDetail(); });
 document.addEventListener('keydown', ev => {
   if (ev.key !== 'Escape') return;
+  if (!$('viewer').hidden) { closeViewer(); return; }
   closeDetail();
   $('modal').hidden = true;
 });
