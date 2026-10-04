@@ -118,7 +118,7 @@ button.chip:hover { border-color: var(--focus); }
         border-radius: 6px; padding: 3px 4px; display: flex; }
 .card:hover .pick { border-color: #ffffff5c; }
 .pick input { accent-color: var(--accent); cursor: pointer; margin: 0; width: 15px; height: 15px; }
-body:not(.batch) .pick { display: none; }   /* 勾选框只在批次管理模式出现 */
+body:not(.batch) .card .pick { display: none; }   /* 墙卡片勾选框只在批次模式出现（合集页 .ccard 不受影响） */
 .ctitle { font-size: 14.5px; font-weight: 600; line-height: 1.45; margin-top: 9px; color: var(--text);
           display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
           min-height: 2.9em; }
