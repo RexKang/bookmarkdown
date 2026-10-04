@@ -14,6 +14,27 @@ import {
 
 const $ = id => document.getElementById(id);
 
+// ---------------- 主题（浅色 / 深色）与版本号 ----------------
+const THEME_KEY = 'bd-theme';
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t;
+  try { localStorage.setItem(THEME_KEY, t); } catch (_) {}
+  const b = $('btnTheme');
+  if (b) {
+    b.textContent = t === 'light' ? '🌙' : '☀️';
+    b.title = t === 'light' ? '切换为深色' : '切换为浅色';
+  }
+}
+(function initTheme() {
+  let t = 'dark';
+  try { t = localStorage.getItem(THEME_KEY) || 'dark'; } catch (_) {}
+  applyTheme(t);
+})();
+$('btnTheme').addEventListener('click', () => {
+  applyTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light');
+});
+$('verLink').textContent = 'v' + chrome.runtime.getManifest().version;
+
 const PLATFORM_LABEL = { bilibili: 'B站', youtube: 'YouTube', web: '网页', generic: '网页' };
 const STATUS_CYCLE = ['想看', '在看', '看过'];
 const STATUS_CLASS = { '想看': 'st-want', '在看': 'st-ing', '看过': 'st-done' };
@@ -26,6 +47,8 @@ const state = {
   inboxFile: '默认.md',
   view: 'wall',       // wall | collections | settings
   mode: 'grid',       // grid | list
+  batch: false,       // 批次管理模式（勾选框只在此时出现）
+  transferMode: 'move', // 复制至 / 移动至
   collection: null,   // null = 全部；否则合集文件名
   search: '',
   statusFilter: '',
@@ -171,6 +194,7 @@ function renderSidebar() {
   $('collist').querySelectorAll('.subitem').forEach(el => el.addEventListener('click', () => {
     state.view = 'wall';
     state.collection = el.dataset.file;
+    state.batch = false;
     state.selEntries.clear();
     renderAll();
   }));
@@ -197,22 +221,39 @@ function renderTopbar() {
     sp.classList.toggle('on', sp.dataset.mode === state.mode));
 }
 
+function refreshSelUI() {
+  const n = state.selEntries.size;
+  $('selInfo').textContent = '已选 ' + n + ' 条';
+  for (const id of ['btnDelEntry', 'btnAuthor', 'btnCopyTo', 'btnMoveTo']) $(id).disabled = n === 0;
+}
+
+function toggleEntrySelection(key) {
+  if (state.selEntries.has(key)) state.selEntries.delete(key); else state.selEntries.add(key);
+  const on = state.selEntries.has(key);
+  [...document.querySelectorAll('.enpick')].filter(i => i.dataset.key === key).forEach(i => { i.checked = on; });
+  refreshSelUI();
+}
+
 function renderOpbar() {
   const isWall = state.view === 'wall';
   const isColl = state.view === 'collections';
-  $('btnAdd').hidden = !isWall;
-  $('btnAuthor').hidden = !isWall;
-  $('btnColl').hidden = !isWall;
-  $('btnDelEntry').hidden = !isWall;
+  const batch = isWall && state.batch;
+  document.body.classList.toggle('batch', batch);
+  $('btnAdd').hidden = !isWall || batch;
+  $('btnBatch').hidden = !isWall || batch;
+  $('btnBatchBack').hidden = !batch;
+  $('btnDelEntry').hidden = !batch;
+  $('btnAuthor').hidden = !batch;
+  $('btnCopyTo').hidden = !batch;
+  $('btnMoveTo').hidden = !batch;
   $('btnNewColl').hidden = !isColl;
   $('btnDelColl').hidden = !isColl;
-  $('selInfo').hidden = state.view === 'settings';
+  $('selInfo').hidden = state.view === 'settings' || (isWall && !batch);
   if (isColl) {
     $('selInfo').textContent = '已选 ' + state.selColls.size + ' 个';
     $('btnDelColl').disabled = state.selColls.size === 0;
-  } else {
-    $('selInfo').textContent = '已选 ' + state.selEntries.size + ' 条';
-    $('btnDelEntry').disabled = state.selEntries.size === 0;
+  } else if (batch) {
+    refreshSelUI();
   }
   if (!isWall && !isColl) hideForms();
 }
@@ -242,10 +283,10 @@ function renderWall(c) {
   const list = visibleEntries();
   if (!list.length) {
     const hint = !state.collection
-      ? '还没有收藏——在任意网页右键「收藏到 BookmarkDown」，或点上方「＋ 添加条目」手动补录。'
+      ? '还没有收藏——在任意网页右键「收藏到 BookmarkDown」，或点上方「＋ 添加收藏」手动补录。'
       : state.collection === state.inboxFile
-        ? '「默认」里还没有条目——新收藏会先落到这里。'
-        : '该合集还没有条目——在别的合集勾选条目，用「加入合集」挪进来。';
+        ? '「默认」里还没有条目——新收藏会先落到这里；也可以用「＋ 添加收藏」手动补录。'
+        : '该合集还没有条目——进入「默认」或其他合集，用「批量管理 → 移动至」挪进来。';
     c.innerHTML = '<div class="emptyhint">' + hint + '</div>';
     return;
   }
@@ -302,16 +343,18 @@ function bindWallEvents(c) {
   c.querySelectorAll('.card').forEach(card => card.addEventListener('click', ev => {
     if (ev.target.closest('.pick') || ev.target.closest('[data-stkey]')) return;
     const entry = state.entries.find(x => x.key === card.dataset.key);
-    if (entry) openDetail(entry);
+    if (!entry) return;
+    if (state.batch) toggleEntrySelection(entry.key); else openDetail(entry);
   }));
   c.querySelectorAll('tr[data-key]').forEach(tr => tr.addEventListener('click', ev => {
     if (ev.target.closest('.chk') || ev.target.closest('[data-stkey]')) return;
     const entry = state.entries.find(x => x.key === tr.dataset.key);
-    if (entry) openDetail(entry);
+    if (!entry) return;
+    if (state.batch) toggleEntrySelection(entry.key); else openDetail(entry);
   }));
   c.querySelectorAll('.enpick').forEach(el => el.addEventListener('change', () => {
     el.checked ? state.selEntries.add(el.dataset.key) : state.selEntries.delete(el.dataset.key);
-    renderOpbar();
+    refreshSelUI();
   }));
   c.querySelectorAll('[data-stkey]').forEach(el => el.addEventListener('click', async () => {
     const entry = state.entries.find(x => x.key === el.dataset.stkey);
@@ -438,9 +481,9 @@ async function ensureCollectionByName(name) {
   return file;
 }
 
-async function moveSelectedTo(targetFile) {
+async function transferSelected(targetFile, mode) {
   const targets = state.entries.filter(e => state.selEntries.has(e.key) && e.file !== targetFile);
-  if (!targets.length) { toast('所选条目已在该合集中'); return; }
+  if (!targets.length) { toast('所选条目已在目标合集中'); return; }
   const blocks = [];
   for (const [file, list] of groupByFile(targets)) {
     let text = await readTextFile(state.root, file);
@@ -449,10 +492,12 @@ async function moveSelectedTo(targetFile) {
       const fresh = parseEntries(text).find(e => e.key === t.key);
       if (!fresh) continue;
       blocks.push(renderEntry(fresh.meta, extractNote(fresh.body)));
-      text = removeEntry(text, t.key).text;
+      if (mode === 'move') text = removeEntry(text, t.key).text;
     }
-    await writeFile(state.root, file, text);
-    await invalidate(file);
+    if (mode === 'move') {
+      await writeFile(state.root, file, text);
+      await invalidate(file);
+    }
   }
   let target = (await readTextFile(state.root, targetFile)) ?? `# ${collectionTitle(targetFile)}\n`;
   for (const b of blocks) target = appendEntry(target, b);
@@ -460,7 +505,7 @@ async function moveSelectedTo(targetFile) {
   await invalidate(targetFile);
   state.selEntries.clear();
   await reloadData();
-  toast('已加入「' + collectionTitle(targetFile) + '」');
+  toast((mode === 'move' ? '已移动 ' : '已复制 ') + blocks.length + ' 条 → ' + collectionTitle(targetFile));
 }
 
 async function deleteEntries(keys) {
@@ -557,7 +602,7 @@ $('dCover').addEventListener('click', () => {
 });
 $('viewer').addEventListener('click', closeViewer);
 
-// ---------------- 补票表单（添加条目） ----------------
+// ---------------- 补票表单（添加收藏） ----------------
 let afBlob = null;
 let afPreviewUrl = null;
 
@@ -692,10 +737,10 @@ $('segView').querySelectorAll('span').forEach(sp => sp.addEventListener('click',
   renderTopbar();
   renderContent();
 }));
-$('navWall').addEventListener('click', () => { state.view = 'wall'; state.collection = null; renderAll(); });
-$('navInbox').addEventListener('click', () => { state.view = 'wall'; state.collection = state.inboxFile; state.selEntries.clear(); renderAll(); });
-$('navColl').addEventListener('click', () => { state.view = 'collections'; renderAll(); });
-$('navSet').addEventListener('click', () => { state.view = 'settings'; renderAll(); });
+$('navWall').addEventListener('click', () => { state.view = 'wall'; state.collection = null; state.batch = false; state.selEntries.clear(); renderAll(); });
+$('navInbox').addEventListener('click', () => { state.view = 'wall'; state.collection = state.inboxFile; state.batch = false; state.selEntries.clear(); renderAll(); });
+$('navColl').addEventListener('click', () => { state.view = 'collections'; state.batch = false; state.selEntries.clear(); renderAll(); });
+$('navSet').addEventListener('click', () => { state.view = 'settings'; state.batch = false; state.selEntries.clear(); renderAll(); });
 
 $('btnAuthor').addEventListener('click', () => {
   hideForms();
@@ -711,12 +756,17 @@ $('authorApply').addEventListener('click', async () => {
   hideForms();
 });
 
-$('btnColl').addEventListener('click', () => {
+function openTransferForm(mode) {
+  state.transferMode = mode;
   hideForms();
-  $('collSelect').innerHTML = state.files.map(f =>
-    `<option value="${escapeHtml(f.file)}">${escapeHtml(f.title)}</option>`).join('');
+  $('collSelect').innerHTML = state.files
+    .filter(f => f.file !== state.collection)
+    .map(f => `<option value="${escapeHtml(f.file)}">${escapeHtml(f.title)}</option>`).join('');
+  $('collApply').textContent = mode === 'move' ? '移动' : '复制';
   $('collForm').hidden = false;
-});
+}
+$('btnMoveTo').addEventListener('click', () => openTransferForm('move'));
+$('btnCopyTo').addEventListener('click', () => openTransferForm('copy'));
 $('collCancel').addEventListener('click', hideForms);
 $('collApply').addEventListener('click', async () => {
   const name = $('collNew').value.trim();
@@ -729,9 +779,11 @@ $('collApply').addEventListener('click', async () => {
   if (!targetFile) return;
   $('collNew').value = '';
   hideForms();
-  await moveSelectedTo(targetFile);
+  await transferSelected(targetFile, state.transferMode);
 });
 
+$('btnBatch').addEventListener('click', () => { state.batch = true; state.selEntries.clear(); hideForms(); renderAll(); });
+$('btnBatchBack').addEventListener('click', () => { state.batch = false; state.selEntries.clear(); hideForms(); renderAll(); });
 $('btnDelEntry').addEventListener('click', () => {
   if (!state.selEntries.size) return;
   confirmBox({
@@ -779,6 +831,7 @@ $('unlock').addEventListener('click', async () => {
     state.root = root;
     await ensureLibrary(root);
     await loadAll();
+    state.collection = state.inboxFile; // 落地页：默认
     showScreen('app');
     renderAll();
   } else {
@@ -796,6 +849,7 @@ async function boot() {
   if (perm !== 'granted') { showScreen('locked'); return; }
   await ensureLibrary(root);
   await loadAll();
+  state.collection = state.inboxFile; // 落地页：默认
   showScreen('app');
   renderAll();
 }

@@ -29,7 +29,7 @@
 <!-- 主应用 -->
 <div id="app" class="shell" hidden>
   <aside class="side">
-    <div class="logo"><span class="mark"></span><span><b>BookmarkDown</b><small>本地收藏 · 海报墙</small></span></div>
+    <div class="logo"><span class="mark"></span><span><b>BookmarkDown <a id="verLink" class="ver" href="https://github.com/RexKang/bookmarkdown" target="_blank" rel="noopener" title="在 GitHub 上查看">v0.1.0</a></b><small>本地收藏 · 海报墙</small></span></div>
     <div class="navitem" id="navWall"><span class="ic">▦</span>墙</div>
     <div class="navitem" id="navInbox"><span class="ic">📥</span>默认<span class="cnt" id="inboxCount">0</span></div>
     <div class="navitem" id="navColl"><span class="ic">🗂</span>合集</div>
@@ -48,15 +48,19 @@
       </select>
       <select class="chip" id="fTag"><option value="">标签：全部</option></select>
       <div class="spacer"></div>
+      <button id="btnTheme" class="chip" title="切换为浅色">☀️</button>
       <div class="seg" id="segView">
         <span data-mode="grid" class="on">▦ 网格</span><span data-mode="list">☰ 列表</span>
       </div>
     </header>
     <div class="opbar">
-      <button id="btnAdd" class="secondary">＋ 添加条目</button>
-      <button id="btnAuthor">批量设作者</button>
-      <button id="btnColl" class="secondary">加入合集</button>
-      <button id="btnDelEntry" class="secondary" disabled>删除选中</button>
+      <button id="btnAdd" class="secondary">＋ 添加收藏</button>
+      <button id="btnBatch" class="secondary">批量管理</button>
+      <button id="btnBatchBack" class="secondary" hidden>← 返回</button>
+      <button id="btnDelEntry" class="secondary" hidden disabled>删除</button>
+      <button id="btnAuthor" hidden>设置作者</button>
+      <button id="btnCopyTo" class="secondary" hidden disabled>复制至 ▾</button>
+      <button id="btnMoveTo" class="secondary" hidden disabled>移动至 ▾</button>
       <button id="btnNewColl" hidden>＋ 新建合集</button>
       <button id="btnDelColl" class="secondary" hidden disabled>删除合集</button>
       <span class="hint" id="selInfo">已选 0 条</span>
@@ -68,7 +72,7 @@
       <div class="inlineform" id="collForm" hidden>
         <select id="collSelect"></select>
         <input id="collNew" placeholder="或新建合集名…">
-        <button id="collApply">加入</button>
+        <button id="collApply">移动</button>
         <button id="collCancel" class="secondary">取消</button>
       </div>
       <div class="inlineform" id="newCollForm" hidden>
@@ -106,10 +110,10 @@
 <!-- 全屏看图 -->
 <div id="viewer" hidden><img id="vImg" alt=""></div>
 
-<!-- 添加条目（补票表单） -->
+<!-- 添加收藏（补票表单） -->
 <div id="addform" class="modal" hidden>
   <div class="dialog dlg-form">
-    <h3>添加条目</h3>
+    <h3>添加收藏</h3>
     <div class="fhint" id="afTarget">保存到：默认</div>
     <div class="frow"><label>链接</label><input id="afUrl" placeholder="https://…（必填）"></div>
     <div class="frow"><label>标题</label><input id="afTitle" placeholder="选填；不填时显示域名"></div>
