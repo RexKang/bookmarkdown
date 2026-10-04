@@ -114,6 +114,27 @@ export function upsertTopic(indexText, topic) {
   return { text: `${base}\n\n${renderTopic(topic)}\n`, topics: [...topics, topic] };
 }
 
+/** 更新合集的 topic 字段（按 id 或 file 匹配）；patch 中值为 undefined 的键会被移除。返回 { text, updated } */
+export function updateTopic(indexText, target = {}, patch = {}) {
+  let updated = false;
+  const out = String(indexText).replace(
+    /<!-- bookmarkdown-topic (\{.*\}) -->\r?\n- \[[^\]]*\]\([^)]*\)/g,
+    (m, json) => {
+      if (updated) return m;
+      try {
+        const t = JSON.parse(json);
+        if ((target.id && t.id === target.id) || (target.file && t.file === target.file)) {
+          const merged = { ...t, ...patch };
+          for (const k of Object.keys(merged)) if (merged[k] === undefined) delete merged[k];
+          updated = true;
+          return renderTopic(merged);
+        }
+      } catch { /* 忽略坏标记 */ }
+      return m;
+    });
+  return { text: out, updated };
+}
+
 /** 从 index.md 中移除合集（按 id 或 file 匹配）；返回 { text, removed } */
 export function removeTopic(indexText, target = {}) {
   let removed = false;

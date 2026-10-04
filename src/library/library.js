@@ -9,7 +9,7 @@ import {
 } from '../lib/fs.js';
 import {
   parseEntries, renderEntry, replaceEntry, removeEntry, appendEntry,
-  extractNote, upsertTopic, removeTopic,
+  extractNote, upsertTopic, removeTopic, updateTopic,
 } from '../lib/md.js';
 
 const $ = id => document.getElementById(id);
@@ -163,9 +163,15 @@ function collectionTitle(file) {
   return state.files.find(f => f.file === file)?.title || file.replace(/\.md$/i, '');
 }
 
+/** 是否私密合集（墙视图不展示其条目） */
+function isPrivateFile(file) {
+  return state.files.some(f => f.file === file && f.private === true);
+}
+
 function visibleEntries() {
   let list = state.entries.slice();
   if (state.collection) list = list.filter(e => e.file === state.collection);
+  else list = list.filter(e => !isPrivateFile(e.file)); // 私密合集不在「墙」展示
   if (state.statusFilter) list = list.filter(e => (e.meta.status || '想看') === state.statusFilter);
   if (state.tagFilter) list = list.filter(e => (e.meta.tags || []).includes(state.tagFilter));
   const q = state.search.trim().toLowerCase();
@@ -190,7 +196,7 @@ function renderSidebar() {
   for (const e of state.entries) counts.set(e.file, (counts.get(e.file) || 0) + 1);
   $('collist').innerHTML = collectionFiles().map(f =>
     `<div class="subitem${state.view === 'wall' && state.collection === f.file ? ' on' : ''}" data-file="${escapeHtml(f.file)}">` +
-    `<span>${escapeHtml(f.title)}</span><b>${counts.get(f.file) || 0}</b></div>`).join('');
+    `<span>${f.private ? '<span class="lock">🔒</span>' : ''}${escapeHtml(f.title)}</span><b>${counts.get(f.file) || 0}</b></div>`).join('');
   $('collist').querySelectorAll('.subitem').forEach(el => el.addEventListener('click', () => {
     state.view = 'wall';
     state.collection = el.dataset.file;
@@ -221,6 +227,13 @@ function renderTopbar() {
     sp.classList.toggle('on', sp.dataset.mode === state.mode));
 }
 
+function refreshCollPrivacyBtn() {
+  const files = [...state.selColls];
+  const allPrivate = files.length > 0 && files.every(f => isPrivateFile(f));
+  $('btnPrivacy').textContent = allPrivate ? '取消私密' : '设置为私密';
+  $('btnPrivacy').disabled = files.length === 0;
+}
+
 function refreshSelUI() {
   const n = state.selEntries.size;
   $('selInfo').textContent = '已选 ' + n + ' 条';
@@ -248,10 +261,12 @@ function renderOpbar() {
   $('btnMoveTo').hidden = !batch;
   $('btnNewColl').hidden = !isColl;
   $('btnDelColl').hidden = !isColl;
+  $('btnPrivacy').hidden = !isColl;
   $('selInfo').hidden = state.view === 'settings' || (isWall && !batch);
   if (isColl) {
     $('selInfo').textContent = '已选 ' + state.selColls.size + ' 个';
     $('btnDelColl').disabled = state.selColls.size === 0;
+    refreshCollPrivacyBtn();
   } else if (batch) {
     refreshSelUI();
   }
@@ -386,7 +401,7 @@ function renderCollections(c) {
    <span class="cnt">${countOf(f.file)} 条</span>
   </div>
   <div class="cbody">
-   <div class="cname">${escapeHtml(f.title)}</div>
+   <div class="cname">${f.private ? '<span class="lock">🔒</span>' : ''}${escapeHtml(f.title)}</div>
    <div class="cmeta2">${escapeHtml(f.file)}</div>
   </div>
  </div>`).join('') + '<div class="ccard newcard" id="newCard">＋ 新建合集</div></div>';
@@ -810,6 +825,20 @@ $('newCollApply').addEventListener('click', async () => {
   toast('已创建合集：' + name);
 });
 
+$('btnPrivacy').addEventListener('click', async () => {
+  const files = [...state.selColls];
+  if (!files.length) return;
+  const makePrivate = !files.every(f => isPrivateFile(f));
+  let text = (await readTextFile(state.root, INDEX_FILE)) ?? '';
+  for (const f of files) {
+    text = updateTopic(text, { file: f }, { private: makePrivate ? true : undefined }).text;
+  }
+  await writeFile(state.root, INDEX_FILE, text);
+  state.selColls.clear();
+  await reloadData();
+  toast((makePrivate ? '已设为私密：' : '已取消私密：') + files.map(f => collectionTitle(f)).join('、'));
+});
+
 $('btnDelColl').addEventListener('click', () => {
   if (!state.selColls.size) return;
   const files = [...state.selColls];
@@ -831,7 +860,6 @@ $('unlock').addEventListener('click', async () => {
     state.root = root;
     await ensureLibrary(root);
     await loadAll();
-    state.collection = state.inboxFile; // 落地页：默认
     showScreen('app');
     renderAll();
   } else {
@@ -849,7 +877,6 @@ async function boot() {
   if (perm !== 'granted') { showScreen('locked'); return; }
   await ensureLibrary(root);
   await loadAll();
-  state.collection = state.inboxFile; // 落地页：默认
   showScreen('app');
   renderAll();
 }

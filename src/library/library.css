@@ -57,6 +57,7 @@ aside.side { width: 224px; flex: none; background: var(--side); border-right: 1p
 .navitem:hover { background: var(--hover); color: var(--text2); }
 .navitem.on { background: var(--active); color: var(--text); border-left-color: var(--accent); }
 .navitem .ic { width: 18px; text-align: center; flex: none; }
+.lock { margin-right: 4px; font-size: 12px; }
 .navitem .cnt { margin-left: auto; color: var(--dim); font-size: 12px; font-weight: 500; }
 .navitem.on .cnt { color: var(--muted); }
 .collistp { display: flex; flex-direction: column; gap: 1px; padding: 2px 0 6px; }

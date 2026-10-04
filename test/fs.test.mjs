@@ -6,7 +6,7 @@ import {
   ensureLibrary, saveCapture, listCollectionFiles, inboxFile,
   readSettings, isExcludedBySettings,
 } from '../src/lib/fs.js';
-import { parseEntries, parseTopics } from '../src/lib/md.js';
+import { parseEntries, parseTopics, updateTopic } from '../src/lib/md.js';
 
 class FakeFile {
   constructor(name) { this.kind = 'file'; this.name = name; this._content = ''; }
@@ -113,6 +113,13 @@ const r6 = await saveCapture(root, {
   targetFile: '不存在的合集.md',
 });
 ok(r6.state === 'saved' && r6.file === '默认.md', '目标文件不存在时回落默认容器');
+
+console.log('· 合集私密属性透传');
+const idxP = updateTopic(root.map.get('index.md')._content, { file: '默认.md' }, { private: true }).text;
+root.map.get('index.md')._content = idxP;
+const filesP = await listCollectionFiles(root);
+ok(filesP.find(f => f.file === '默认.md')?.private === true, 'private 字段透传到合集清单');
+ok(filesP.find(f => f.file === '散装.md')?.private === false, '散装文件 private 为 false');
 
 console.log('· 旧库迁移（收件箱 → 默认）');
 const legacy = new FakeDir();

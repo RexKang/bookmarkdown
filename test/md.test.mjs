@@ -1,10 +1,7 @@
 // 合集文件文本层单测：node test/md.test.mjs
 // 样例数据全部为合成内容，不含任何真实数据。
 import assert from 'node:assert/strict';
-import {
-  parseEntries, findEntry, findEntryByUrl, renderEntry,
-  replaceEntry, removeEntry, appendEntry, extractNote, parseTopics, upsertTopic, removeTopic,
-} from '../src/lib/md.js';
+import { parseEntries, findEntry, findEntryByUrl, renderEntry, replaceEntry, removeEntry, appendEntry, extractNote, parseTopics, upsertTopic, removeTopic, updateTopic, renderTopic } from '../src/lib/md.js';
 import { normalizeUrl, safeStem, nowStamp } from '../src/lib/util.js';
 
 let passed = 0;
@@ -70,5 +67,18 @@ ok(normalizeUrl('https://x.com/a?utm_a=1&spm=2&keep=3#h') === 'https://x.com/a?k
 ok(safeStem('BV1TEST0001') === 'BV1TEST0001', 'safeStem 保留字母数字');
 ok(safeStem('中文标题') === 'item', 'safeStem 中文回退 item');
 ok(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(nowStamp()), 'nowStamp 格式');
+
+console.log('· updateTopic 更新合集字段');
+const idxU = '# 索引\n\n' + renderTopic({ id: 'c1', title: '硬件', file: '硬件.md', parent: null, order: 1 }) + '\n';
+const u1 = updateTopic(idxU, { file: '硬件.md' }, { private: true });
+ok(u1.updated === true, '更新命中');
+ok(parseTopics(u1.text)[0].private === true, 'private 已写入');
+ok(u1.text.includes('- [硬件](硬件.md)'), '链接行保留');
+const u2 = updateTopic(u1.text, { file: '硬件.md' }, { private: undefined });
+ok(parseTopics(u2.text)[0].private === undefined, 'undefined 删除字段');
+const u3 = updateTopic(u2.text, { file: '不存在.md' }, { private: true });
+ok(u3.updated === false, '未命中返回 false');
+const u4 = updateTopic(u2.text, { id: 'c1' }, { title: '硬件设备' });
+ok(parseTopics(u4.text)[0].title === '硬件设备' && u4.text.includes('- [硬件设备](硬件.md)'), '按 id 更新并可改标题');
 
 console.log(`\n全部通过：${passed} 项断言`);
