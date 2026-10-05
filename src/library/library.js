@@ -179,7 +179,7 @@ function visibleEntries() {
   const q = state.search.trim().toLowerCase();
   if (q) {
     list = list.filter(e =>
-      [e.meta.title, e.meta.author, e.fileTitle].filter(Boolean).join(' ').toLowerCase().includes(q));
+      [e.meta.title, e.meta.author, e.meta.url, e.fileTitle].filter(Boolean).join(' ').toLowerCase().includes(q));
   }
   list.sort((a, b) => String(b.meta.collected || '').localeCompare(String(a.meta.collected || '')));
   return list;
@@ -959,6 +959,7 @@ $('dDel').addEventListener('click', () => {
 $('detail').addEventListener('click', ev => { if (ev.target.id === 'detail') closeDetail(); });
 document.addEventListener('keydown', ev => {
   if (ev.key !== 'Escape') return;
+  if (ev.target && ev.target.id === 'search') { ev.target.value = ''; state.search = ''; renderContent(); ev.target.blur(); return; }
   if (!$('editform').hidden) { closeEditForm(); return; }
   if (!$('addform').hidden) { closeAddForm(); return; }
   if (!$('viewer').hidden) { closeViewer(); return; }
@@ -973,6 +974,7 @@ async function pickDirectory() {
     await setRootHandle(root);
     await ensureLibrary(root);
     await loadAll();
+    applyQueryParam();
     showScreen('app');
     renderAll();
     toast('库已就绪：' + root.name);
@@ -1098,6 +1100,7 @@ $('unlock').addEventListener('click', async () => {
     state.root = root;
     await ensureLibrary(root);
     await loadAll();
+    applyQueryParam();
     showScreen('app');
     renderAll();
   } else {
@@ -1106,6 +1109,11 @@ $('unlock').addEventListener('click', async () => {
 });
 
 // ---------------- 启动 ----------------
+function applyQueryParam() {
+  const q0 = new URLSearchParams(location.search).get('q');
+  if (q0) { state.search = q0; $('search').value = q0; }
+}
+
 async function boot() {
   const root = await getRootHandle().catch(() => null);
   if (!root) { showScreen('onboard'); return; }
@@ -1115,7 +1123,44 @@ async function boot() {
   if (perm !== 'granted') { showScreen('locked'); return; }
   await ensureLibrary(root);
   await loadAll();
+  applyQueryParam();
   showScreen('app');
   renderAll();
 }
 boot();
+
+// ---------------- 键盘导航（v0.2）----------------
+// / 或 Ctrl+K 聚焦搜索；方向键移动卡片焦点（←→ 相邻、↑↓ 按行）；Enter 打开详情
+document.addEventListener('keydown', ev => {
+  const t = ev.target || {};
+  const inField = ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName);
+  if (!inField && (ev.key === '/' || ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'k'))) {
+    ev.preventDefault();
+    $('search').focus();
+    $('search').select();
+    return;
+  }
+  if (inField) return;
+  if ($('app').hidden) return;
+  if (document.querySelector('.modal:not([hidden]), #viewer:not([hidden])')) return;
+  const keys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter'];
+  if (!keys.includes(ev.key)) return;
+  const cards = [...document.querySelectorAll('.wall .card')];
+  if (!cards.length) return;
+  const idx = cards.findIndex(c => c.classList.contains('kbd'));
+  if (ev.key === 'Enter') {
+    if (idx >= 0) { ev.preventDefault(); cards[idx].click(); }
+    return;
+  }
+  ev.preventDefault();
+  let step = ev.key === 'ArrowLeft' ? -1 : 1;
+  if (ev.key === 'ArrowUp' || ev.key === 'ArrowDown') {
+    const grid = document.querySelector('.wall');
+    const cols = grid ? (getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length || 1) : 1;
+    step = ev.key === 'ArrowDown' ? cols : -cols;
+  }
+  const next = idx < 0 ? 0 : Math.min(cards.length - 1, Math.max(0, idx + step));
+  cards.forEach(c => c.classList.remove('kbd'));
+  cards[next].classList.add('kbd');
+  cards[next].scrollIntoView({ block: 'nearest' });
+});

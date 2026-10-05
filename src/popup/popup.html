@@ -3,22 +3,41 @@
 <head>
 <meta charset="utf-8">
 <style>
-  body { width: 280px; margin: 0; padding: 14px; background: #0f1218; color: #f2f4f8;
+  :root { color-scheme: dark; }
+  body { width: 320px; margin: 0; padding: 12px; background: #0f1218; color: #f2f4f8;
          font: 13px/1.6 system-ui, "Microsoft YaHei", sans-serif; }
   .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; margin-bottom: 8px; }
   .brand i { width: 6px; height: 18px; border-radius: 2px; background: #e50914; display: inline-block; }
-  .status { color: #96a0b2; font-size: 12px; margin-bottom: 10px; min-height: 32px; }
-  button { width: 100%; border: 0; border-radius: 7px; padding: 8px 10px; margin-top: 6px;
-           background: #2965cc; color: #fff; font: inherit; cursor: pointer; }
+  .brand .cnt { color: #96a0b2; font-size: 12px; font-weight: 400; margin-left: auto; }
+  .search { width: 100%; box-sizing: border-box; background: #171c26; border: 1px solid #2a3143; border-radius: 7px;
+            color: #f2f4f8; padding: 7px 9px; font: inherit; outline: none; }
+  .search:focus { border-color: #3d68b8; }
+  .list { margin: 8px 0; max-height: 300px; overflow: auto; }
+  .item { display: flex; gap: 8px; padding: 6px; border-radius: 7px; cursor: pointer; align-items: center; }
+  .item:hover { background: #1a2030; }
+  .th { width: 42px; height: 26px; flex: none; border-radius: 4px; background: #1d2433; object-fit: cover; display: block; }
+  .tx { min-width: 0; flex: 1; }
+  .tx .t { font-weight: 600; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
+  .tx .m { color: #96a0b2; font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .empty { color: #96a0b2; padding: 14px 4px; text-align: center; }
+  .status { color: #96a0b2; font-size: 12px; margin: 4px 0 8px; min-height: 16px; overflow: hidden;
+            text-overflow: ellipsis; white-space: nowrap; }
+  .btns { display: flex; gap: 6px; }
+  button { flex: 1; border: 0; border-radius: 7px; padding: 7px 8px; background: #2965cc; color: #fff; font: inherit; cursor: pointer; }
   button.secondary { background: #262d3c; }
   button:disabled { opacity: .45; cursor: not-allowed; }
 </style>
 </head>
 <body>
-  <div class="brand"><i></i>BookmarkDown</div>
+  <div class="brand"><i></i>BookmarkDown<span class="cnt" id="cnt"></span></div>
+  <input class="search" id="q" placeholder="搜索标题 / 作者 / 标签，回车进全页墙" autofocus>
+  <div class="list" id="list"></div>
   <div class="status" id="status">检查中…</div>
-  <button id="collect" disabled>收藏当前页面</button>
-  <button id="open" class="secondary">打开库</button>
+  <div class="btns">
+    <button id="collect" disabled>收藏当前页面</button>
+    <button id="open" class="secondary">打开库</button>
+    <button id="panel" class="secondary">侧栏</button>
+  </div>
   <script type="module" src="popup.js"></script>
 </body>
 </html>

@@ -4,8 +4,9 @@
   "version": "0.1.1",
   "description": "本地优先的视频收藏海报墙：右键一键收藏，数据是你磁盘上的 Markdown 条目 + 封面快照",
   "minimum_chrome_version": "122",
-  "permissions": ["contextMenus", "activeTab", "scripting", "storage"],
+  "permissions": ["contextMenus", "activeTab", "scripting", "storage", "sidePanel"],
   "optional_host_permissions": ["http://*/*", "https://*/*"],
   "background": { "service_worker": "src/background/service-worker.js", "type": "module" },
-  "action": { "default_title": "BookmarkDown", "default_popup": "src/popup/popup.html" }
+  "action": { "default_title": "BookmarkDown", "default_popup": "src/popup/popup.html" },
+  "side_panel": { "default_path": "src/sidepanel/sidepanel.html" }
 }

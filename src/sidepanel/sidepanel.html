@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; background: #0f1218; color: #f2f4f8; font: 13px/1.6 system-ui, "Microsoft YaHei", sans-serif; }
+  .head { position: sticky; top: 0; z-index: 2; display: flex; gap: 6px; align-items: center; padding: 10px;
+          background: rgba(15,18,24,.94); backdrop-filter: blur(4px); border-bottom: 1px solid #1d2433; }
+  .head b { font-size: 13.5px; white-space: nowrap; }
+  .head b i { display: inline-block; width: 5px; height: 14px; border-radius: 2px; background: #e50914; margin-right: 6px; vertical-align: -2px; }
+  .head input { flex: 1; min-width: 0; background: #171c26; border: 1px solid #2a3143; border-radius: 6px; color: #f2f4f8;
+                padding: 5px 8px; font: inherit; outline: none; }
+  .head button { border: 0; background: #262d3c; color: #f2f4f8; border-radius: 6px; padding: 5px 9px; cursor: pointer; font: inherit; }
+  .col { padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+  .sc { border: 1px solid #1d2433; border-radius: 8px; overflow: hidden; cursor: pointer; background: #131824; }
+  .sc:hover { border-color: #2a3143; }
+  .sc .cv { width: 100%; aspect-ratio: 16 / 9; background: #1d2433; display: block; object-fit: cover; }
+  .sc .cv.grad { display: flex; align-items: center; justify-content: center; color: #96a0b2; font-weight: 700; }
+  .sc .bd { padding: 7px 9px 8px; }
+  .sc .t { font-weight: 600; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .sc .m { color: #96a0b2; font-size: 11.5px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .empty { color: #96a0b2; text-align: center; padding: 24px 10px; }
+</style>
+</head>
+<body>
+  <div class="head"><b><i></i>BookmarkDown</b><input id="q" placeholder="过滤…"><button id="reload" title="刷新">⟳</button></div>
+  <div class="col" id="col"><div class="empty">读取中…</div></div>
+  <script type="module" src="sidepanel.js"></script>
+</body>
+</html>
