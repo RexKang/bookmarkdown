@@ -664,11 +664,22 @@ $('afFile').addEventListener('change', () => {
   $('afFile').value = '';
 });
 document.addEventListener('paste', ev => {
-  if ($('addform').hidden) return;
   const item = [...(ev.clipboardData?.items || [])].find(it => it.type.startsWith('image/'));
-  if (!item) return; // 文本粘贴放行（填链接用）
+  if (!item) return; // 文本粘贴放行（填链接等）
   const blob = item.getAsFile();
-  if (blob) { ev.preventDefault(); setAfImage(blob); }
+  if (!blob) return;
+  if (!$('addform').hidden) { // 表单已开：直接设为封面
+    ev.preventDefault();
+    setAfImage(blob);
+    return;
+  }
+  const ae = document.activeElement;
+  if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA')) return; // 输入框内的粘贴不劫持
+  if ($('app').hidden) return; // 库页未打开
+  ev.preventDefault();
+  openAddForm(); // 任意处 Ctrl+V 图片 → 打开「添加收藏」并带上封面
+  setAfImage(blob);
+  toast('已粘贴图片作为封面');
 });
 const afPickEl = $('afPick');
 afPickEl.addEventListener('dragover', ev => { ev.preventDefault(); afPickEl.classList.add('over'); });

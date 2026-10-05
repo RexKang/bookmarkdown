@@ -1,6 +1,6 @@
 // BookmarkDown · 库目录读写层
-// index.md 合集清单、合集文件读写、封面 webp 落盘、settings.json、去重。
-// 除 toWebp（需浏览器图像 API）外全部可与 node 单测共用（配内存假目录）。
+// index.md 合集清单、合集文件读写、封面落盘（≤1920 原图保留 / 超限缩 1920 转 webp）、settings.json、去重。
+// 除 processCover（需浏览器图像 API）外全部可与 node 单测共用（配内存假目录）。
 
 import {
   parseEntries, renderEntry, appendEntry, replaceEntry, extractNote,
@@ -131,17 +131,42 @@ export async function isExcludedBySettings(url, root) {
   return (settings.excludedPatterns || DEFAULT_EXCLUDES).some(p => wildcardMatch(url, p));
 }
 
-/** 压缩为 webp（缩略图 maxWidth 640，质量 0.75）。浏览器环境使用（SW / 库页均可） */
-export async function toWebp(blob) {
-  const bitmap = await createImageBitmap(blob);
-  const scale = Math.min(1, 640 / bitmap.width);
-  const canvas = new OffscreenCanvas(
-    Math.max(1, Math.round(bitmap.width * scale)),
-    Math.max(1, Math.round(bitmap.height * scale)),
-  );
+/** 封面长边上限（1080P 档） */
+export const COVER_MAX_SIDE = 1920;
+
+const MIME_EXT = {
+  'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',
+  'image/gif': 'gif', 'image/avif': 'avif', 'image/bmp': 'bmp', 'image/svg+xml': 'svg',
+};
+
+/** 由 MIME 推文件扩展名（未知回落 jpg） */
+export function extForMime(type) {
+  return MIME_EXT[String(type || '').toLowerCase().split(';')[0].trim()] || 'jpg';
+}
+
+/**
+ * 处理封面图。浏览器环境使用（SW / 库页均可）。
+ * 规则：原图长边 ≤ 1920 → 原图原字节保留（不缩不转不重压，保住清晰度）；
+ *       长边 > 1920 → 等比缩到长边 1920，转 webp（质量 0.92）；绝不放大。
+ * 返回 { blob, ext }：ext 用于落盘文件名后缀。
+ */
+export async function processCover(blob) {
+  let bitmap = null;
+  try {
+    bitmap = await createImageBitmap(blob);
+  } catch {
+    return { blob, ext: extForMime(blob.type) }; // 解不开的（罕见格式）→ 原样保留
+  }
+  const w = bitmap.width, h = bitmap.height, max = Math.max(w, h);
+  if (max <= COVER_MAX_SIDE) {
+    bitmap.close();
+    return { blob, ext: extForMime(blob.type) };
+  }
+  const scale = COVER_MAX_SIDE / max;
+  const canvas = new OffscreenCanvas(Math.max(1, Math.round(w * scale)), Math.max(1, Math.round(h * scale)));
   canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   bitmap.close();
-  return canvas.convertToBlob({ type: 'image/webp', quality: 0.75 });
+  return { blob: await canvas.convertToBlob({ type: 'image/webp', quality: 0.92 }), ext: 'webp' };
 }
 
 function mapPlatform(p) {
@@ -181,8 +206,9 @@ export async function saveCapture(root, record) {
   if (hasCover) {
     const stem = safeStem(record.vid || ('c' + Date.now()));
     const thumbDir = await root.getDirectoryHandle(THUMB_DIR, { create: true });
-    await writeFile(thumbDir, `${stem}.webp`, await toWebp(record.coverBlob));
-    thumbnail = `${THUMB_DIR}/${stem}.webp`;
+    const cov = await processCover(record.coverBlob);
+    await writeFile(thumbDir, `${stem}.${cov.ext}`, cov.blob);
+    thumbnail = `${THUMB_DIR}/${stem}.${cov.ext}`;
   }
 
   const meta = {

@@ -10,7 +10,7 @@ Right-click any video page to save it. Every bookmark is written into **plain Ma
 
 - **One-click capture**: right-click any page → "Save to BookmarkDown"; images and links work too
 - **Metadata extraction**: deep support for Bilibili / YouTube (title, uploader, duration); generic Open Graph fallback everywhere else
-- **Dual-channel covers**: in-page fetch first; visible-area screenshot as fallback; everything normalized to ≤640px WebP
+- **Dual-channel covers**: in-page fetch first; visible-area screenshot as fallback; originals kept as-is up to 1080P, larger ones scaled to 1920px long side (WebP q92) — quality first
 - **Zero host_permissions**: no install-time permission warnings; access to the current tab is granted only via activeTab, only at the moment you capture
 - **Poster wall**: left sidebar (Wall / Inbox / Collections / Settings), grid & list views, search, status filter, collections
 - **Batch tools**: set author, move to collection, delete (with confirmation), click-to-cycle status (Want / Watching / Watched)

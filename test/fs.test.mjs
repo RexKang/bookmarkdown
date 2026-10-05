@@ -7,6 +7,7 @@ import {
   readSettings, isExcludedBySettings,
 } from '../src/lib/fs.js';
 import { parseEntries, parseTopics, updateTopic } from '../src/lib/md.js';
+import { extForMime } from '../src/lib/fs.js';
 
 class FakeFile {
   constructor(name) { this.kind = 'file'; this.name = name; this._content = ''; }
@@ -134,5 +135,11 @@ ok(legacy.map.has('默认.md'), '默认.md 已生成');
 ok(!legacy.map.has('收件箱.md'), '旧文件已移除');
 ok(legacy.map.get('默认.md')._content.includes('老条目'), '内容迁移完整');
 ok(legacy.map.get('index.md')._content.includes('默认.md') && !legacy.map.get('index.md')._content.includes('收件箱'), 'index.md 已更新');
+
+console.log('· 封面扩展名映射');
+ok(extForMime('image/jpeg') === 'jpg', 'jpeg → jpg');
+ok(extForMime('image/png; charset=x') === 'png', '带参数 mime 容错');
+ok(extForMime('image/webp') === 'webp', 'webp → webp');
+ok(extForMime('') === 'jpg', '空 mime 回落 jpg');
 
 console.log(`\n全部通过：${passed} 项断言`);
