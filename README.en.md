@@ -2,20 +2,21 @@
 
 A local-first "poster wall" for your video bookmarks — Chrome extension (Manifest V3).
 
-Right-click any video page to save it. Every bookmark is written into **plain Markdown files on your own disk**, with covers stored as WebP snapshots. Open the library in Obsidian, version it with git — no cloud, no database, no account.
+Right-click any video page to save it. Every bookmark is written into **plain Markdown files on your own disk**, with covers stored as local image snapshots (WebP or originals). Open the library in Obsidian, version it with git — no cloud, no database, no account.
 
 [中文说明 →](README.md)
 
-## Features (v0.1.0)
+## Features (v0.1.1)
 
 - **One-click capture**: right-click any page → "Save to BookmarkDown"; images and links work too
 - **Metadata extraction**: deep support for Bilibili / YouTube (title, uploader, duration); generic Open Graph fallback everywhere else
 - **Dual-channel covers**: in-page fetch first; visible-area screenshot as fallback; originals kept as-is up to 1080P, larger ones scaled to 1920px long side (WebP q92) — quality first
 - **Zero host_permissions**: no install-time permission warnings; access to the current tab is granted only via activeTab, only at the moment you capture
-- **Poster wall**: left sidebar (Wall / Inbox / Collections / Settings), grid & list views, search, status filter, collections
-- **Batch tools**: set author, move to collection, delete (with confirmation), click-to-cycle status (Want / Watching / Watched)
+- **Poster wall**: left sidebar (Wall / Default / Collections / Settings), grid & list views, search, status filter, collections; light & dark themes
+- **Private collections**: mark a collection private — its items stay out of the Wall; a lock icon marks it in the sidebar
+- **Batch & edit**: "Batch manage" mode (delete / set author / copy to / move to); detail card → "Edit" for title / link / author / status / collection / cover
 - **Detail card**: click an item for details; click the cover for fullscreen viewing (click anywhere / Esc to close)
-- **Manual entry form**: for content you can't capture (in-app links, canvas, restricted pages) — paste a link and an image
+- **Manual entry**: for content you can't capture (in-app links, canvas, restricted pages) — paste a link; cover via click / drag & drop / Ctrl+V anywhere
 - **Deduplication**: the same video / URL is recognized; existing entries can be upgraded with a cover
 
 ## Library layout
@@ -65,8 +66,8 @@ Requires Chrome / Edge (Chromium) ≥ 122.
 ## Usage
 
 - **Capture**: right-click → "Save to BookmarkDown"; a ✓ badge on the toolbar icon means success
-- **Organize**: select items → batch author / move to collection / delete; click a card for the detail view; click the cover for fullscreen
-- **Manual entry**: "+ Add item" (saves into the collection you are viewing)
+- **Organize**: "Batch manage" → select items → delete / set author / copy to / move to; "Edit" changes all fields of one item; click the cover for fullscreen
+- **Manual entry**: "+ Add" (saves into the collection you are viewing; covers accept Ctrl+V paste)
 - **Exclusions**: edit `settings.json` inside your library
 
 ## Development & tests
@@ -86,8 +87,9 @@ node test/fs.test.mjs   # storage layer: init, dedupe, target-collection writes 
 
 ## Roadmap
 
-- **v0.1.0 (current)**: capture, dual-channel covers, Markdown file library, poster wall, detail card, manual entry
-- v0.2: in-library editing (title / tags / notes) + Markdown rendering, background re-fetch, popup quick search
+- **v0.1.1 (current)**: edit dialog, batch manage mode, light/dark themes, private collections, cover quality upgrade (originals up to 1080P kept), Ctrl+V paste anywhere
+- **v0.1.0**: capture, dual-channel covers, Markdown file library, poster wall, detail card, manual entry
+- v0.2: tags / notes + Markdown rendering, background re-fetch, popup quick search
 - v0.3: Bilibili favorites import, dead-link detection, static HTML export
 - v1.0: store release, multiple libraries, polish
 

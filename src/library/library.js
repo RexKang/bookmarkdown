@@ -1,4 +1,4 @@
-// BookmarkDown · 库页主界面（v0.1.0）
+// BookmarkDown · 库页主界面
 // 左栏（墙 / 合集 / 设置 + 合集列表）+ 网格/列表双视图 + 合集页 + 轻编辑。
 // 设计定稿：docs/0.2.0-PRD.md §2.1.5 / §7；设计稿 spike/style-drafts/。
 
