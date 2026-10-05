@@ -37,11 +37,19 @@ export function findEntryByUrl(text, url) {
 }
 
 /** 渲染条目区块（隐藏标记 + 人类可读小节）。meta.key 缺省时按 vid/URL 生成。 */
+/** 剥掉常见站点标题后缀（B站 / YouTube 的 og:title 尾巴） */
+export function stripTitleSuffix(t) {
+  return String(t || '')
+    .replace(/\s*[|·\-–—_]+\s*(哔哩哔哩[\s\-_]*[Bb]ilibili|哔哩哔哩|[Bb]ilibili|YouTube)\s*$/u, '')
+    .trim();
+}
+
 export function renderEntry(meta, note = '') {
   const m = { ...meta };
   m.key = m.key || entryKey(m);
   m.status = m.status || '想看';
-  const title = sanitizeTitle(m.title) || m.url || '未命名';
+  m.title = stripTitleSuffix(sanitizeTitle(m.title));
+  const title = m.title || m.url || '未命名';
   const lines = [`<!-- bookmarkdown-entry ${JSON.stringify(m)} -->`, `## ${title}`, ''];
   if (m.url) lines.push(`- URL: ${m.url}`);
   if (m.platform) lines.push(`- 平台: ${m.platform}`);

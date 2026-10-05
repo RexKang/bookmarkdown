@@ -81,4 +81,10 @@ ok(u3.updated === false, '未命中返回 false');
 const u4 = updateTopic(u2.text, { id: 'c1' }, { title: '硬件设备' });
 ok(parseTopics(u4.text)[0].title === '硬件设备' && u4.text.includes('- [硬件设备](硬件.md)'), '按 id 更新并可改标题');
 
+console.log('· 标题后缀剥离');
+ok(renderEntry({ key: 'k1', title: '视频标题_哔哩哔哩_bilibili', url: 'https://b23.tv/x' }).includes('## 视频标题\n'), 'B站后缀剥离');
+ok(renderEntry({ key: 'k1b', title: '视频标题_哔哩哔哩_bilibili', url: 'https://b23.tv/x' }).includes('"title":"视频标题"'), '存储 meta 标题也剥尾');
+ok(renderEntry({ key: 'k2', title: 'How to X - YouTube', url: 'https://youtu.be/x' }).includes('## How to X\n'), 'YouTube 后缀剥离');
+ok(renderEntry({ key: 'k3', title: '带-横杠的-标题', url: 'https://e.com/x' }).includes('## 带-横杠的-标题\n'), '普通标题不动');
+
 console.log(`\n全部通过：${passed} 项断言`);

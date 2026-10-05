@@ -866,6 +866,86 @@ $('dOpen').addEventListener('click', () => {
   if (url) chrome.tabs.create({ url }).catch(() => window.open(url, '_blank'));
 });
 $('dEdit').addEventListener('click', () => { if (detailEntry) openEditForm(detailEntry); });
+
+// 补抓封面：按站点请求一次性权限 → 库页内直接抓取 og 元数据与封面 → 回写条目
+function parseOg(html, baseUrl) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const meta = (...names) => {
+    for (const n of names) {
+      const el = doc.querySelector(`meta[property="${n}"], meta[name="${n}"]`);
+      const c = el && el.getAttribute('content');
+      if (c && c.trim()) return c.trim();
+    }
+    return '';
+  };
+  const abs = s => { try { return new URL(s, baseUrl).href; } catch (_) { return ''; } };
+  return {
+    title: meta('og:title', 'twitter:title') || (doc.querySelector('title')?.textContent || '').trim(),
+    image: abs(meta('og:image', 'og:image:url', 'twitter:image')),
+  };
+}
+
+async function refetchEntry(e) {
+  const url = e.meta.url || '';
+  let origin = '';
+  try {
+    const u = new URL(url);
+    if (!/^https?:$/.test(u.protocol)) throw 0;
+    origin = u.origin + '/*';
+  } catch (_) {}
+  if (!origin) { toast('此条目没有可补抓的网页链接'); return; }
+  try {
+    const has = await chrome.permissions.contains({ origins: [origin] });
+    if (!has) {
+      const granted = await chrome.permissions.request({ origins: [origin] });
+      if (!granted) { toast('未获得该站点权限，无法补抓'); return; }
+    }
+  } catch (_) { /* API 不可用（如测试环境）时直接尝试抓取 */ }
+  const btn = $('dFetch');
+  const oldText = btn.textContent;
+  btn.disabled = true; btn.textContent = '补抓中…';
+  try {
+    const resp = await fetch(url, { credentials: 'omit' });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const og = parseOg(await resp.text(), url);
+    let thumb = e.meta.thumbnail || null;
+    let gotCover = false;
+    if (og.image && !og.image.startsWith('data:')) {
+      const ir = await fetch(og.image, { credentials: 'omit' });
+      if (ir.ok) {
+        const blob = await ir.blob();
+        if (blob.type.startsWith('image/') && blob.size <= 12 * 1024 * 1024) {
+          const cov = await processCover(blob);
+          const stem = safeStem(e.meta.vid || ('c' + Date.now()));
+          const dir = await state.root.getDirectoryHandle(THUMB_DIR, { create: true });
+          await writeFile(dir, `${stem}.${cov.ext}`, cov.blob);
+          thumb = `${THUMB_DIR}/${stem}.${cov.ext}`;
+          gotCover = thumb !== e.meta.thumbnail;
+        }
+      }
+    }
+    const newTitle = (og.title || '').slice(0, 200);
+    const titleChanged = !!newTitle && newTitle !== e.meta.title;
+    if (!gotCover && !titleChanged) { toast('没有抓到新的封面或标题'); return; }
+    const meta = { ...e.meta, title: newTitle || e.meta.title };
+    if (gotCover) meta.thumbnail = thumb;
+    const block = renderEntry(meta, extractNote(e.body));
+    const text = (await readTextFile(state.root, e.file)) ?? '';
+    const { text: updated } = replaceEntry(text, e.key, block);
+    await writeFile(state.root, e.file, updated);
+    coverUrls.clear();
+    closeDetail();
+    await reloadData();
+    const ne = state.entries.find(x => x.key === e.key);
+    if (ne) openDetail(ne);
+    toast(gotCover ? '封面已补抓' : '标题已更新');
+  } catch (err) {
+    toast('补抓失败：' + String(err.message || err).slice(0, 50));
+  } finally {
+    btn.disabled = false; btn.textContent = oldText;
+  }
+}
+$('dFetch').addEventListener('click', () => { if (detailEntry) refetchEntry(detailEntry); });
 $('dClose').addEventListener('click', closeDetail);
 $('dDel').addEventListener('click', () => {
   if (!detailEntry) return;
