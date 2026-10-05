@@ -5,8 +5,9 @@
 import { getRootHandle, setRootHandle, idbGet, idbSet } from '../lib/idb.js';
 import {
   ensureLibrary, listCollectionFiles, readTextFile, writeFile,
-  readIndexTopics, INDEX_FILE, INBOX_ID, saveCapture,
+  readIndexTopics, INDEX_FILE, INBOX_ID, saveCapture, processCover, THUMB_DIR,
 } from '../lib/fs.js';
+import { safeStem } from '../lib/util.js';
 import {
   parseEntries, renderEntry, replaceEntry, removeEntry, appendEntry,
   extractNote, upsertTopic, removeTopic, updateTopic,
@@ -673,6 +674,11 @@ document.addEventListener('paste', ev => {
     setAfImage(blob);
     return;
   }
+  if (!$('editform').hidden) { // 编辑表单已开：替换封面
+    ev.preventDefault();
+    setEfImage(blob);
+    return;
+  }
   const ae = document.activeElement;
   if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA')) return; // 输入框内的粘贴不劫持
   if ($('app').hidden) return; // 库页未打开
@@ -689,6 +695,138 @@ afPickEl.addEventListener('drop', ev => {
   afPickEl.classList.remove('over');
   const f = [...(ev.dataTransfer?.files || [])].find(x => x.type.startsWith('image/'));
   if (f) setAfImage(f);
+});
+
+// ===================== 编辑收藏 =====================
+let efEntry = null;          // 正在编辑的条目
+let efBlob = null;           // 新选的封面 blob（优先）
+let efPreviewUrl = null;     // 新封面 objectURL
+let efExistingUrl = null;    // 现有封面 objectURL（来自库文件）
+let efRemoveCover = false;   // 用户点击了「移除图片」
+
+function renderEfImage() {
+  const img = $('efPrev');
+  const noimg = $('efNoimg');
+  if (efPreviewUrl) { URL.revokeObjectURL(efPreviewUrl); efPreviewUrl = null; }
+  if (efBlob) {
+    efPreviewUrl = URL.createObjectURL(efBlob);
+    img.src = efPreviewUrl; img.hidden = false;
+    noimg.hidden = true;
+    $('efClear').hidden = false;
+  } else if (efRemoveCover) {
+    img.hidden = true; img.removeAttribute('src');
+    noimg.hidden = false;
+    noimg.textContent = '封面已移除（保存后生效）· 也可点击/拖入/Ctrl+V 换新图';
+    $('efClear').hidden = true;
+  } else if (efExistingUrl) {
+    img.src = efExistingUrl; img.hidden = false;
+    noimg.hidden = true;
+    $('efClear').hidden = false;
+  } else {
+    img.hidden = true; img.removeAttribute('src');
+    noimg.hidden = false;
+    noimg.textContent = '点击选择图片 · 拖入 · 或直接 Ctrl+V 粘贴';
+    $('efClear').hidden = true;
+  }
+}
+
+function setEfImage(blob) {
+  efBlob = blob || null;
+  if (blob) efRemoveCover = false;
+  renderEfImage();
+}
+
+async function openEditForm(entry) {
+  efEntry = entry; efBlob = null; efRemoveCover = false; efExistingUrl = null;
+  $('efTitle').value = entry.meta.title || '';
+  $('efUrl').value = entry.meta.url || '';
+  $('efAuthor').value = entry.meta.author || '';
+  $('efStatus').value = entry.meta.status || '想看';
+  const opts = [{ file: state.inboxFile, title: '默认' },
+                ...collectionFiles().map(f => ({ file: f.file, title: f.title }))];
+  $('efColl').innerHTML = opts.map(o =>
+    `<option value="${escapeHtml(o.file)}"${o.file === entry.file ? ' selected' : ''}>${escapeHtml(o.title)}</option>`).join('');
+  if (entry.meta.thumbnail) { try { efExistingUrl = await coverUrl(entry.meta.thumbnail); } catch (_) { efExistingUrl = null; } }
+  $('efMeta').textContent = (entry.meta.collected ? '收藏于 ' + entry.meta.collected + ' · ' : '')
+    + (entry.meta.vid || entry.meta.platform || entry.file);
+  renderEfImage();
+  $('editform').hidden = false;
+  setTimeout(() => $('efTitle').focus(), 60);
+}
+
+function closeEditForm() {
+  $('editform').hidden = true;
+  efEntry = null; efBlob = null; efRemoveCover = false; efExistingUrl = null;
+  if (efPreviewUrl) { URL.revokeObjectURL(efPreviewUrl); efPreviewUrl = null; }
+}
+
+$('efPick').addEventListener('click', ev => { if (!ev.target.closest('#efClear')) $('efFile').click(); });
+$('efClear').addEventListener('click', ev => { ev.stopPropagation(); efBlob = null; efRemoveCover = true; renderEfImage(); });
+$('efFile').addEventListener('change', () => {
+  const f = $('efFile').files && $('efFile').files[0];
+  if (f) setEfImage(f);
+  $('efFile').value = '';
+});
+const efPickEl = $('efPick');
+efPickEl.addEventListener('dragover', ev => { ev.preventDefault(); efPickEl.classList.add('over'); });
+efPickEl.addEventListener('dragleave', () => efPickEl.classList.remove('over'));
+efPickEl.addEventListener('drop', ev => {
+  ev.preventDefault();
+  efPickEl.classList.remove('over');
+  const f = [...(ev.dataTransfer?.files || [])].find(x => x.type.startsWith('image/'));
+  if (f) setEfImage(f);
+});
+$('efCancel').addEventListener('click', closeEditForm);
+$('editform').addEventListener('click', ev => { if (ev.target.id === 'editform') closeEditForm(); });
+
+// 保存编辑：改元数据 / 换封面 / 移动合集（单归属）
+$('efSave').addEventListener('click', async () => {
+  const e = efEntry;
+  if (!e) return;
+  const url = $('efUrl').value.trim() || e.meta.url || '';
+  if (!url) { toast('链接不能为空'); return; }
+  let host = '';
+  try { host = new URL(url).hostname; } catch (_) {}
+  const title = $('efTitle').value.trim() || host || e.meta.title || url;
+  const author = $('efAuthor').value.trim();
+  const status = $('efStatus').value;
+  const targetFile = $('efColl').value || e.file;
+  $('efSave').disabled = true;
+  try {
+    let thumbnail = e.meta.thumbnail || undefined;
+    if (efBlob) {
+      const cov = await processCover(efBlob);
+      const stem = safeStem(e.meta.vid || ('c' + Date.now()));
+      const thumbDir = await state.root.getDirectoryHandle(THUMB_DIR, { create: true });
+      await writeFile(thumbDir, `${stem}.${cov.ext}`, cov.blob);
+      thumbnail = `${THUMB_DIR}/${stem}.${cov.ext}`;
+    } else if (efRemoveCover) {
+      thumbnail = undefined;
+    }
+    const meta = { ...e.meta, title, url, author: author || undefined, status, thumbnail };
+    for (const k of Object.keys(meta)) if (meta[k] === undefined) delete meta[k];
+    const block = renderEntry(meta, extractNote(e.body));
+    if (targetFile === e.file) {
+      const text = (await readTextFile(state.root, e.file)) ?? '';
+      const { text: updated } = replaceEntry(text, e.key, block);
+      await writeFile(state.root, e.file, updated);
+    } else {
+      const oldText = (await readTextFile(state.root, e.file)) ?? '';
+      const { text: stripped } = removeEntry(oldText, e.key);
+      await writeFile(state.root, e.file, stripped);
+      const newText = (await readTextFile(state.root, targetFile)) ?? `# ${targetFile.replace(/\.md$/i, '')}\n`;
+      await writeFile(state.root, targetFile, appendEntry(newText, block));
+    }
+    closeEditForm();
+    closeDetail();
+    await reloadData();
+    const ne = state.entries.find(x => x.key === e.key);
+    if (ne) openDetail(ne);
+    toast('已保存');
+  } catch (err) {
+    toast('保存失败：' + String(err.message || err).slice(0, 50));
+  }
+  $('efSave').disabled = false;
 });
 for (const id of ['afUrl', 'afTitle']) {
   $(id).addEventListener('keydown', ev => { if (ev.key === 'Enter') $('afSave').click(); });
@@ -720,6 +858,7 @@ $('dOpen').addEventListener('click', () => {
   const url = detailEntry?.meta?.url;
   if (url) chrome.tabs.create({ url }).catch(() => window.open(url, '_blank'));
 });
+$('dEdit').addEventListener('click', () => { if (detailEntry) openEditForm(detailEntry); });
 $('dClose').addEventListener('click', closeDetail);
 $('dDel').addEventListener('click', () => {
   if (!detailEntry) return;
@@ -733,6 +872,7 @@ $('dDel').addEventListener('click', () => {
 $('detail').addEventListener('click', ev => { if (ev.target.id === 'detail') closeDetail(); });
 document.addEventListener('keydown', ev => {
   if (ev.key !== 'Escape') return;
+  if (!$('editform').hidden) { closeEditForm(); return; }
   if (!$('addform').hidden) { closeAddForm(); return; }
   if (!$('viewer').hidden) { closeViewer(); return; }
   closeDetail();

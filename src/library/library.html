@@ -102,6 +102,7 @@
     <div id="dNote" class="dnote" hidden></div>
     <div class="mbtn">
       <button id="dOpen">打开原链接</button>
+      <button id="dEdit" class="secondary">编辑</button>
       <button id="dDel" class="danger">删除</button>
       <button id="dClose" class="secondary">关闭</button>
     </div>
@@ -120,7 +121,7 @@
     <div class="frow"><label>标题</label><input id="afTitle" placeholder="选填；不填时显示域名"></div>
     <div class="frow"><label>封面</label>
       <div class="afpick" id="afPick" title="点击选择图片；也可 Ctrl+V 粘贴或拖入">
-        <div class="afthumb"><img id="afPrev" alt="" hidden><span id="afNoimg">点击选择图片 · 拖入 · 或直接 Ctrl+V 粘贴</span></div>
+        <div class="afthumb"><img id="afPrev" alt="" hidden><span id="afNoimg" class="afnoimg">点击选择图片 · 拖入 · 或直接 Ctrl+V 粘贴</span></div>
         <button id="afClear" class="secondary" hidden>移除图片</button>
       </div>
     </div>
@@ -128,6 +129,36 @@
     <div class="mbtn">
       <button id="afSave">保存</button>
       <button id="afCancel" class="secondary">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- 编辑收藏 -->
+<div id="editform" class="modal" hidden>
+  <div class="dialog dlg-form">
+    <h3>编辑收藏</h3>
+    <div class="fhint" id="efMeta">…</div>
+    <div class="frow"><label>标题</label><input id="efTitle"></div>
+    <div class="frow"><label>链接</label><input id="efUrl" placeholder="https://…"></div>
+    <div class="frow"><label>作者</label><input id="efAuthor" placeholder="留空则不显示作者"></div>
+    <div class="frow"><label>状态</label>
+      <select id="efStatus">
+        <option value="想看">想看</option>
+        <option value="在看">在看</option>
+        <option value="看过">看过</option>
+      </select>
+    </div>
+    <div class="frow"><label>合集</label><select id="efColl"></select></div>
+    <div class="frow"><label>封面</label>
+      <div class="afpick" id="efPick" title="点击选择图片；也可 Ctrl+V 粘贴或拖入">
+        <div class="afthumb"><img id="efPrev" alt="" hidden><span id="efNoimg" class="afnoimg">点击选择图片 · 拖入 · 或直接 Ctrl+V 粘贴</span></div>
+        <button id="efClear" class="secondary" hidden>移除图片</button>
+      </div>
+    </div>
+    <input type="file" id="efFile" accept="image/*" hidden>
+    <div class="mbtn">
+      <button id="efSave">保存</button>
+      <button id="efCancel" class="secondary">取消</button>
     </div>
   </div>
 </div>
