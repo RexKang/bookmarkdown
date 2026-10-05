@@ -6,7 +6,7 @@ Right-click any video page to save it. Every bookmark is written into **plain Ma
 
 [中文说明 →](README.md)
 
-## Features (v0.1.1)
+## Features (v0.2.0)
 
 - **One-click capture**: right-click any page → "Save to BookmarkDown"; images and links work too
 - **Metadata extraction**: deep support for Bilibili / YouTube (title, uploader, duration); generic Open Graph fallback everywhere else
@@ -14,7 +14,12 @@ Right-click any video page to save it. Every bookmark is written into **plain Ma
 - **Zero host_permissions**: no install-time permission warnings; access to the current tab is granted only via activeTab, only at the moment you capture
 - **Poster wall**: left sidebar (Wall / Default / Collections / Settings), grid & list views, search, status filter, collections; light & dark themes
 - **Private collections**: mark a collection private — its items stay out of the Wall; a lock icon marks it in the sidebar
-- **Batch & edit**: "Batch manage" mode (delete / set author / copy to / move to); detail card → "Edit" for title / link / author / status / collection / cover
+- **Batch & edit**: "Batch manage" mode (delete / set author / copy to / move to); detail card → "Edit" for title / link / author / status / collection / tags / notes / cover
+- **Tags & notes**: tag entries and write body notes; notes render as Markdown (GFM) in the detail card
+- **Cover re-fetch**: one click on an old no-cover entry requests per-site permission and backfills the og title & cover (still zero install warnings)
+- **Popup quick search**: search titles / authors / tags / URLs right from the toolbar icon; Enter opens the full wall
+- **Side panel**: browse your library in a narrow column while watching
+- **Keyboard nav**: `/` or Ctrl+K focuses search; arrows move the card focus; Enter opens details
 - **Detail card**: click an item for details; click the cover for fullscreen viewing (click anywhere / Esc to close)
 - **Manual entry**: for content you can't capture (in-app links, canvas, restricted pages) — paste a link; cover via click / drag & drop / Ctrl+V anywhere
 - **Deduplication**: the same video / URL is recognized; existing entries can be upgraded with a cover
@@ -68,6 +73,8 @@ Requires Chrome / Edge (Chromium) ≥ 122.
 - **Capture**: right-click → "Save to BookmarkDown"; a ✓ badge on the toolbar icon means success
 - **Organize**: "Batch manage" → select items → delete / set author / copy to / move to; "Edit" changes all fields of one item; click the cover for fullscreen
 - **Manual entry**: "+ Add" (saves into the collection you are viewing; covers accept Ctrl+V paste)
+- **Re-fetch**: no-cover entries → detail card → "Re-fetch cover" → grant the site once → og title & cover backfilled
+- **Shortcuts**: `/` search · `Esc` clear/close · arrows move card focus · `Enter` opens details
 - **Exclusions**: edit `settings.json` inside your library
 
 ## Development & tests
@@ -87,9 +94,10 @@ node test/fs.test.mjs   # storage layer: init, dedupe, target-collection writes 
 
 ## Roadmap
 
-- **v0.1.1 (current)**: edit dialog, batch manage mode, light/dark themes, private collections, cover quality upgrade (originals up to 1080P kept), Ctrl+V paste anywhere
+- **v0.2.0 (current)**: tags / notes + Markdown rendering, cover re-fetch, popup quick search, side panel, keyboard nav
+- **v0.1.1**: edit dialog, batch manage mode, light/dark themes, private collections, cover quality upgrade (originals up to 1080P kept), Ctrl+V paste anywhere
 - **v0.1.0**: capture, dual-channel covers, Markdown file library, poster wall, detail card, manual entry
-- v0.2: tags / notes + Markdown rendering, background re-fetch, popup quick search
+- v0.3: Bilibili favorites import, dead-link detection, static HTML export, subfolders
 - v0.3: Bilibili favorites import, dead-link detection, static HTML export
 - v1.0: store release, multiple libraries, polish
 
