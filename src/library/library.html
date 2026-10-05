@@ -149,12 +149,14 @@
       </select>
     </div>
     <div class="frow"><label>合集</label><select id="efColl"></select></div>
+    <div class="frow"><label>标签</label><input id="efTags" placeholder="逗号分隔，如：K8s, 安全"></div>
     <div class="frow"><label>封面</label>
       <div class="afpick" id="efPick" title="点击选择图片；也可 Ctrl+V 粘贴或拖入">
         <div class="afthumb"><img id="efPrev" alt="" hidden><span id="efNoimg" class="afnoimg">点击选择图片 · 拖入 · 或直接 Ctrl+V 粘贴</span></div>
         <button id="efClear" class="secondary" hidden>移除图片</button>
       </div>
     </div>
+    <div class="frow"><label>笔记</label><textarea id="efNote" rows="6" placeholder="正文笔记，支持 Markdown（列表、粗体、链接、代码块…）"></textarea></div>
     <input type="file" id="efFile" accept="image/*" hidden>
     <div class="mbtn">
       <button id="efSave">保存</button>

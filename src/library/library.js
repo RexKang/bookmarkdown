@@ -8,6 +8,7 @@ import {
   readIndexTopics, INDEX_FILE, INBOX_ID, saveCapture, processCover, THUMB_DIR,
 } from '../lib/fs.js';
 import { safeStem } from '../lib/util.js';
+import { renderNote } from '../lib/mdrender.js';
 import {
   parseEntries, renderEntry, replaceEntry, removeEntry, appendEntry,
   extractNote, upsertTopic, removeTopic, updateTopic,
@@ -586,6 +587,7 @@ async function openDetail(entry) {
     ['状态', m.status || '想看'],
     ['收藏于', m.collected || ''],
     ['链接', m.url || ''],
+    ['标签', (m.tags || []).join(', ')],
   ].filter(r => r[1]);
   $('dRows').innerHTML = rows.map(([k, v]) => `<div class="drow"><b>${k}</b><span>${escapeHtml(v)}</span></div>`).join('');
   let note = '';
@@ -596,7 +598,7 @@ async function openDetail(entry) {
   } catch (_) {}
   const noteEl = $('dNote');
   noteEl.hidden = !note;
-  noteEl.textContent = note;
+  noteEl.innerHTML = note ? renderNote(note) : '';
   $('detail').hidden = false;
 }
 
@@ -742,6 +744,8 @@ async function openEditForm(entry) {
   $('efUrl').value = entry.meta.url || '';
   $('efAuthor').value = entry.meta.author || '';
   $('efStatus').value = entry.meta.status || '想看';
+  $('efTags').value = (entry.meta.tags || []).join(', ');
+  $('efNote').value = extractNote(entry.body) || '';
   const opts = [{ file: state.inboxFile, title: '默认' },
                 ...collectionFiles().map(f => ({ file: f.file, title: f.title }))];
   $('efColl').innerHTML = opts.map(o =>
@@ -790,6 +794,8 @@ $('efSave').addEventListener('click', async () => {
   const title = $('efTitle').value.trim() || host || e.meta.title || url;
   const author = $('efAuthor').value.trim();
   const status = $('efStatus').value;
+  const tags = $('efTags').value.split(/[,，]/).map(s => s.trim()).filter(Boolean);
+  const noteText = $('efNote').value;
   const targetFile = $('efColl').value || e.file;
   $('efSave').disabled = true;
   try {
@@ -803,9 +809,10 @@ $('efSave').addEventListener('click', async () => {
     } else if (efRemoveCover) {
       thumbnail = undefined;
     }
-    const meta = { ...e.meta, title, url, author: author || undefined, status, thumbnail };
+    const meta = { ...e.meta, title, url, author: author || undefined, status,
+      tags: tags.length ? tags : undefined, thumbnail };
     for (const k of Object.keys(meta)) if (meta[k] === undefined) delete meta[k];
-    const block = renderEntry(meta, extractNote(e.body));
+    const block = renderEntry(meta, noteText);
     if (targetFile === e.file) {
       const text = (await readTextFile(state.root, e.file)) ?? '';
       const { text: updated } = replaceEntry(text, e.key, block);
