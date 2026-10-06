@@ -6,7 +6,7 @@ Right-click any video page to save it. Every bookmark is written into **plain Ma
 
 [中文说明 →](README.md)
 
-## Features (v0.2.0)
+## Features (v0.3.0)
 
 - **One-click capture**: right-click any page → "Save to BookmarkDown"; images and links work too
 - **Metadata extraction**: deep support for Bilibili / YouTube (title, uploader, duration); generic Open Graph fallback everywhere else
@@ -20,6 +20,9 @@ Right-click any video page to save it. Every bookmark is written into **plain Ma
 - **Popup quick search**: search titles / authors / tags / URLs right from the toolbar icon; Enter opens the full wall
 - **Side panel**: browse your library in a narrow column while watching
 - **Keyboard nav**: `/` or Ctrl+K focuses search; arrows move the card focus; Enter opens details
+- **Bilibili favorites import**: read your Bilibili favorite folders from the settings page and import them in bulk (covers fetched, deduped, titles cleaned)
+- **Dead-link detection**: batch "Check links" marks 404/refused as broken and 403/rate-limited as uncertain; results are written back and badged
+- **Static HTML export**: one click generates `wall.html` (with built-in search, private collections excluded by default) for browsing without the extension
 - **Detail card**: click an item for details; click the cover for fullscreen viewing (click anywhere / Esc to close)
 - **Manual entry**: for content you can't capture (in-app links, canvas, restricted pages) — paste a link; cover via click / drag & drop / Ctrl+V anywhere
 - **Deduplication**: the same video / URL is recognized; existing entries can be upgraded with a cover
@@ -75,6 +78,9 @@ Requires Chrome / Edge (Chromium) ≥ 122.
 - **Manual entry**: "+ Add" (saves into the collection you are viewing; covers accept Ctrl+V paste)
 - **Re-fetch**: no-cover entries → detail card → "Re-fetch cover" → grant the site once → og title & cover backfilled
 - **Shortcuts**: `/` search · `Esc` clear/close · arrows move card focus · `Enter` opens details
+- **Bilibili import**: Settings → "Read my favorites" → pick a folder → "Import" (requires a Bilibili login; creates a "B站·…" collection)
+- **Dead links**: Batch manage → select items → "Check links"; a red badge means broken
+- **Export**: Settings → "Export wall.html" → open `wall.html` from your library folder
 - **Exclusions**: edit `settings.json` inside your library
 
 ## Development & tests
@@ -94,12 +100,12 @@ node test/fs.test.mjs   # storage layer: init, dedupe, target-collection writes 
 
 ## Roadmap
 
-- **v0.2.0 (current)**: tags / notes + Markdown rendering, cover re-fetch, popup quick search, side panel, keyboard nav
+- **v0.3.0 (current)**: Bilibili favorites import, dead-link detection, static HTML export
+- v0.3.1 (planned): subfolders, multiple libraries, new-tab replacement
+- **v0.2.0**: tags / notes + Markdown rendering, cover re-fetch, popup quick search, side panel, keyboard nav
 - **v0.1.1**: edit dialog, batch manage mode, light/dark themes, private collections, cover quality upgrade (originals up to 1080P kept), Ctrl+V paste anywhere
 - **v0.1.0**: capture, dual-channel covers, Markdown file library, poster wall, detail card, manual entry
-- v0.3: Bilibili favorites import, dead-link detection, static HTML export, subfolders
-- v0.3: Bilibili favorites import, dead-link detection, static HTML export
-- v1.0: store release, multiple libraries, polish
+- v1.0: store release, polish
 
 ## License
 
