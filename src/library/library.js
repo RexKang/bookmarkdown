@@ -2,7 +2,8 @@
 // 左栏（墙 / 合集 / 设置 + 合集列表）+ 网格/列表双视图 + 合集页 + 轻编辑。
 // 设计定稿：docs/0.2.0-PRD.md §2.1.5 / §7；设计稿 spike/style-drafts/。
 
-import { getRootHandle, setRootHandle, idbGet, idbSet } from '../lib/idb.js';
+import { getRootHandle, setRootHandle, idbGet, idbSet,
+  getActiveRoot, getLibraries, upsertLibrary, setActiveLibrary, removeLibrary } from '../lib/idb.js';
 import {
   ensureLibrary, listCollectionFiles, readTextFile, writeFile,
   readIndexTopics, INDEX_FILE, INBOX_ID, saveCapture, processCover, THUMB_DIR,
@@ -544,6 +545,52 @@ async function ensureBiliPerm() {
   return true;
 }
 
+async function fillLibRow() {
+  const el = $('libRow');
+  if (!el) return;
+  const libs = await getLibraries().catch(() => null);
+  if (!libs || !Array.isArray(libs.list) || !libs.list.length) { el.innerHTML = '多库：<span class="hint">仅当前库</span>'; return; }
+  el.innerHTML = '多库：' + libs.list.map(l =>
+    `<span style="display:inline-block;margin:2px 0"><button class="secondary libbtn" data-id="${l.id}" ${l.id === libs.activeId ? 'disabled' : ''}>${escapeHtml(l.name)}${l.id === libs.activeId ? ' ✓' : ''}</button>` +
+    `<a href="#" class="librm" data-id="${l.id}" title="从列表移除（磁盘文件不动）" style="margin:0 10px 0 2px;color:var(--muted2);text-decoration:none">✕</a></span>`).join(' ');
+  el.querySelectorAll('.libbtn').forEach(b => b.addEventListener('click', () => switchToLibrary(b.dataset.id)));
+  el.querySelectorAll('.librm').forEach(a => a.addEventListener('click', ev => { ev.preventDefault(); removeLibFromList(a.dataset.id); }));
+}
+
+async function switchToLibrary(id) {
+  const ok = await setActiveLibrary(id).catch(() => false);
+  if (!ok) return;
+  const libs = await getLibraries();
+  const cur = libs.list.find(l => l.id === id);
+  if (!cur) return;
+  let perm = 'prompt';
+  try { perm = await cur.handle.queryPermission({ mode: 'readwrite' }); } catch (_) {}
+  if (perm !== 'granted') {
+    state.root = cur.handle;
+    showScreen('locked');
+    return;
+  }
+  state.root = cur.handle;
+  await ensureLibrary(state.root);
+  await loadAll();
+  applyQueryParam();
+  renderAll();
+  toast('已切换到：' + cur.name);
+}
+
+async function removeLibFromList(id) {
+  const ok = await removeLibrary(id).catch(() => false);
+  if (!ok) { toast('至少保留一个库'); return; }
+  const libs = await getLibraries();
+  if (libs && libs.activeId && libs.activeId !== (state.root && null)) {
+    // 若移除的是当前库，切到剩余第一个
+    const stillListed = libs.list.some(l => l.name === state.root.name);
+    if (!stillListed) { await switchToLibrary(libs.activeId); toast('已从列表移除（磁盘文件未动）'); return; }
+  }
+  toast('已从列表移除（磁盘文件未动）');
+  fillLibRow();
+}
+
 function fillBiliFolders() {
   const sel = $('biliFolder');
   if (!sel) return;
@@ -663,14 +710,16 @@ function renderSettings(c) {
   c.innerHTML = `
  <div style="max-width:680px">
   <div class="setrow">库目录：<b>${escapeHtml(state.root.name)}</b>　<span class="hint">（浏览器安全限制不提供完整路径）</span></div>
+  <div class="setrow" id="libRow">多库：加载中…</div>
   <div class="setrow">条目：<b>${state.entries.length}</b> 条 ｜ 合集：<b>${collectionFiles().length}</b> 个</div>
   <div class="setrow">数据形态：Markdown 条目 + <code>thumbnails/</code> 封面快照　<span class="hint">建议给库目录建 git 仓库留底</span></div>
-  <div class="setrow">更换库目录：<button id="repick" class="secondary" style="margin-left:10px">重新选择目录…</button></div>
+  <div class="setrow">添加库目录：<button id="repick" class="secondary" style="margin-left:10px">选择目录（添加并切换）…</button></div>
   <div class="setrow">导出静态海报墙：<button id="expWall" class="secondary" style="margin-left:10px">导出 wall.html</button><label style="margin-left:12px"><input type="checkbox" id="expPriv"> 包含私密合集</label>　<span class="hint">生成于库根目录，浏览器直接打开</span></div>
   <div class="setrow">B 站收藏夹导入：<button id="biliLoad" class="secondary" style="margin-left:10px">读取我的收藏夹</button>　<span class="hint">需在本浏览器已登录 B 站；导入会抓取标题与封面</span></div>
   <div class="setrow" id="biliRow" hidden>目标收藏夹：<select id="biliFolder" style="background:var(--input);color:var(--text);border:1px solid var(--border2);border-radius:6px;padding:6px 8px;font:inherit;max-width:320px"></select><button id="biliImport" class="secondary" disabled style="margin-left:10px">开始导入</button><span class="hint" id="biliStatus"></span></div>
  </div>`;
   c.querySelector('#repick').addEventListener('click', pickDirectory);
+  fillLibRow();
   c.querySelector('#expWall').addEventListener('click', exportWallHtml);
   c.querySelector('#biliLoad').addEventListener('click', biliLoadFolders);
   c.querySelector('#biliImport').addEventListener('click', biliImport);
@@ -1213,12 +1262,13 @@ async function pickDirectory() {
     const root = await window.showDirectoryPicker({ id: 'bookmarkdown', mode: 'readwrite' });
     state.root = root;
     await setRootHandle(root);
+    await upsertLibrary(root);
     await ensureLibrary(root);
     await loadAll();
     applyQueryParam();
     showScreen('app');
     renderAll();
-    toast('库已就绪：' + root.name);
+    toast('库已就绪：' + root.name + '（已加入多库列表）');
   } catch (e) {
     if (e?.name !== 'AbortError') alert('选择目录失败：' + (e.message || e));
   }
@@ -1386,7 +1436,7 @@ $('btnDelColl').addEventListener('click', () => {
 
 $('pick').addEventListener('click', pickDirectory);
 $('unlock').addEventListener('click', async () => {
-  const root = state.root || await getRootHandle().catch(() => null);
+  const root = state.root || await getActiveRoot().catch(() => null);
   if (!root) { showScreen('onboard'); return; }
   const perm = await root.requestPermission({ mode: 'readwrite' });
   if (perm === 'granted') {
@@ -1408,7 +1458,7 @@ function applyQueryParam() {
 }
 
 async function boot() {
-  const root = await getRootHandle().catch(() => null);
+  const root = await getActiveRoot().catch(() => null);
   if (!root) { showScreen('onboard'); return; }
   state.root = root;
   let perm = 'prompt';

@@ -262,3 +262,5 @@ footer.statusbar { border-top: 1px solid var(--line); padding: 10px 22px; color:
 .subitem.child { padding-left: 36px; }
 .subitem.child > span::before { content: '└'; margin-right: 6px; color: var(--muted2); }
 .childmark { margin-right: 4px; color: var(--muted2); font-weight: 400; }
+
+.libbtn { padding: 3px 12px; margin: 0; }
