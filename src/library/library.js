@@ -206,7 +206,7 @@ function renderSidebar() {
   const tops = colls.filter(f => !f.parent);
   const orphans = colls.filter(f => f.parent && !topIds.has(f.parent));
   $('collist').innerHTML = tops.map(f =>
-    itemHtml(f, false) + colls.filter(k => k.parent === f.id).map(k => itemHtml(k, true)).join('')
+    itemHtml(f, false) + colls.filter(k => f.id && k.parent === f.id).map(k => itemHtml(k, true)).join('')
   ).join('') + orphans.map(f => itemHtml(f, false)).join('');
   $('collist').querySelectorAll('.subitem').forEach(el => el.addEventListener('click', () => {
     state.view = 'wall';
