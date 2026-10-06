@@ -538,6 +538,8 @@ async function ensureBiliPerm() {
 function fillBiliFolders() {
   const sel = $('biliFolder');
   if (!sel) return;
+  const row = $('biliRow');
+  if (row) row.hidden = false;
   sel.innerHTML = biliFolders.map(f =>
     `<option value="${f.id}">${escapeHtml(f.title)}（${f.media_count != null ? f.media_count : '?'} 条）</option>`).join('');
 }
