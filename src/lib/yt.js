@@ -183,7 +183,7 @@ async function resText(r) { if (!r || !r.ok) throw new Error('HTTP ' + (r ? r.st
 async function resJson(r) { if (!r || !r.ok) throw new Error('HTTP ' + (r ? r.status : '?')); return r.json(); }
 
 /** 全量导入：抓页 → 初始批 → 续页（止于 cap / 无 token），返回 { playlistId, title, channel, items } */
-export async function importYoutubePlaylist({ url, fetchFn = fetch, cap = 500, onProgress } = {}) {
+export async function importYoutubePlaylist({ url, fetchFn = fetch, cap = 500, onProgress, contFetch } = {}) {
   const id = ytPlaylistId(url);
   if (!id) throw new Error('无法从链接中识别播放列表（示例：…/playlist?list=PLxxxx；稍后观看填 WL）');
   const html = await resText(await fetchFn(`${PAGE}/playlist?list=${encodeURIComponent(id)}`, { credentials: 'include' }));
@@ -203,11 +203,16 @@ export async function importYoutubePlaylist({ url, fetchFn = fetch, cap = 500, o
       context: { client: { clientName: 'WEB', clientVersion: page.clientVersion || '2.20261002.10.00', hl: 'en', gl: 'US' } },
       continuation: token,
     });
-    const j = await resJson(await fetchFn(`${PAGE}/youtubei/v1/browse?key=${page.apiKey || KNOWN_WEB_KEY}&prettyPrint=false`, {
-      method: 'POST', credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body,
-    }));
+    let j;
+    if (contFetch) {
+      j = await contFetch({ apiKey: page.apiKey || KNOWN_WEB_KEY, clientVersion: page.clientVersion, token });
+    } else {
+      j = await resJson(await fetchFn(`${PAGE}/youtubei/v1/browse?key=${page.apiKey || KNOWN_WEB_KEY}&prettyPrint=false`, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      }));
+    }
     const next = parseContinuationData(j);
     const before = items.length;
     push(next.items);
@@ -230,4 +235,59 @@ export async function fetchYtCover(videoId, fetchFn = fetch) {
     } catch (_) {}
   }
   return null;
+}
+
+// ---------------- 浏览器环境：YouTube 标签页续页器 ----------------
+// 背景：扩展上下文对 youtubei 的 POST 会因 Origin=chrome-extension:// 被 YouTube 403；
+// 唯一可行通道是在 youtube.com 页面的 MAIN world 中发起（同源请求，Origin 为页面自身）。
+// 依赖：manifest permissions 含 "scripting"；运行时已授权 youtube.com 主机权限。
+
+export async function makeYtTabPaginator({ url } = {}) {
+  let tabId = null;
+  let ready = false;
+  const probe = async () => {
+    const [r] = await chrome.scripting.executeScript({ target: { tabId }, world: 'MAIN', func: () => location.origin });
+    return r && r.result;
+  };
+  const ensureReady = async () => {
+    if (ready) return;
+    const t = await chrome.tabs.create({ url: url || 'https://www.youtube.com/', active: false });
+    tabId = t.id;
+    const t0 = Date.now();
+    while (Date.now() - t0 < 25000) {
+      try { if ((await probe()) === 'https://www.youtube.com') { ready = true; return; } } catch (_) {}
+      await new Promise(r2 => setTimeout(r2, 400));
+    }
+    throw new Error('YouTube 页面加载超时（检查网络/代理）');
+  };
+  return {
+    /** 在页面上下文中请求续页；返回响应 JSON */
+    async contFetch({ apiKey, clientVersion, token }) {
+      await ensureReady();
+      const [res] = await chrome.scripting.executeScript({
+        target: { tabId },
+        world: 'MAIN',
+        func: async (k, cv, tk) => {
+          try {
+            const r = await fetch('https://www.youtube.com/youtubei/v1/browse?key=' + encodeURIComponent(k) + '&prettyPrint=false', {
+              method: 'POST',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ context: { client: { clientName: 'WEB', clientVersion: cv, hl: 'en', gl: 'US' } }, continuation: tk }),
+            });
+            if (!r.ok) return { error: 'HTTP ' + r.status };
+            return { data: await r.json() };
+          } catch (e) { return { error: String((e && e.message) || e) }; }
+        },
+        args: [apiKey, clientVersion, token],
+      });
+      const v = res && res.result;
+      if (!v) throw new Error('续页注入无结果');
+      if (v.error) throw new Error('续页失败：' + v.error);
+      return v.data;
+    },
+    async close() {
+      if (tabId != null) { try { await chrome.tabs.remove(tabId); } catch (_) {} tabId = null; ready = false; }
+    },
+  };
 }

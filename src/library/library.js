@@ -4,7 +4,7 @@
 
 import { getRootHandle, setRootHandle, idbGet, idbSet,
   getActiveRoot, getLibraries, upsertLibrary, setActiveLibrary, removeLibrary } from '../lib/idb.js';
-import { YT_ORIGINS, importYoutubePlaylist, fetchYtCover } from '../lib/yt.js';
+import { YT_ORIGINS, importYoutubePlaylist, fetchYtCover, makeYtTabPaginator } from '../lib/yt.js';
 import {
   ensureLibrary, listCollectionFiles, readTextFile, writeFile,
   readIndexTopics, INDEX_FILE, INBOX_ID, saveCapture, processCover, THUMB_DIR,
@@ -720,7 +720,13 @@ async function ytImport() {
   try {
     if (!(await ensureYtPerm())) { st.textContent = '未获得 YouTube 访问权限'; return; }
     st.textContent = '抓取列表…';
-    const res = await importYoutubePlaylist({ url, cap: 500, onProgress: n => { st.textContent = '抓取列表… ' + n + ' 条'; } });
+    const pager = await makeYtTabPaginator();
+    let res;
+    try {
+      res = await importYoutubePlaylist({ url, cap: 500, onProgress: n => { st.textContent = '抓取列表… ' + n + ' 条'; }, contFetch: pager.contFetch });
+    } finally {
+      await pager.close();
+    }
     if (!res.items.length) { st.textContent = '没有读到条目（列表为空或不可见）'; return; }
     const filePart = ('YouTube·' + (res.title || res.playlistId)).replace(/[\\/:*?"<>|\r\n]/g, '').slice(0, 60) || ('yt-' + res.playlistId);
     const file = filePart + '.md';
