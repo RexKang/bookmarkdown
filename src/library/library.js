@@ -4,6 +4,7 @@
 
 import { getRootHandle, setRootHandle, idbGet, idbSet,
   getActiveRoot, getLibraries, upsertLibrary, setActiveLibrary, removeLibrary } from '../lib/idb.js';
+import { YT_ORIGINS, importYoutubePlaylist, fetchYtCover } from '../lib/yt.js';
 import {
   ensureLibrary, listCollectionFiles, readTextFile, writeFile,
   readIndexTopics, INDEX_FILE, INBOX_ID, saveCapture, processCover, THUMB_DIR,
@@ -695,6 +696,76 @@ async function biliImport() {
   $('biliLoad').disabled = false;
 }
 
+// ---------------- YouTube 导入 ----------------
+
+async function ensureYtPerm() {
+  try {
+    const missing = [];
+    for (const o of YT_ORIGINS) {
+      if (!(await chrome.permissions.contains({ origins: [o] }))) missing.push(o);
+    }
+    if (missing.length) return !!(await chrome.permissions.request({ origins: missing }).catch(() => false));
+  } catch (_) { return true; }
+  return true;
+}
+
+async function ytImport() {
+  const btn = $('ytImport');
+  const st = $('ytStatus');
+  const url = ($('ytUrl').value || '').trim();
+  if (!url) { st.textContent = '先粘贴一个播放列表链接'; return; }
+  btn.disabled = true;
+  const oldText = btn.textContent;
+  btn.textContent = '导入中…';
+  try {
+    if (!(await ensureYtPerm())) { st.textContent = '未获得 YouTube 访问权限'; return; }
+    st.textContent = '抓取列表…';
+    const res = await importYoutubePlaylist({ url, cap: 500, onProgress: n => { st.textContent = '抓取列表… ' + n + ' 条'; } });
+    if (!res.items.length) { st.textContent = '没有读到条目（列表为空或不可见）'; return; }
+    const filePart = ('YouTube·' + (res.title || res.playlistId)).replace(/[\\/:*?"<>|\r\n]/g, '').slice(0, 60) || ('yt-' + res.playlistId);
+    const file = filePart + '.md';
+    if ((await readTextFile(state.root, file)) === null) {
+      await writeFile(state.root, file, '# ' + filePart + '\n');
+    }
+    let idxText = (await readTextFile(state.root, INDEX_FILE)) ?? '';
+    const has = (await readIndexTopics(state.root)).some(t => t.file === file);
+    if (!has) {
+      idxText = upsertTopic(idxText, { id: 'c-yt-' + res.playlistId, title: filePart, file, parent: null, order: 999 }).text;
+      await writeFile(state.root, INDEX_FILE, idxText);
+    }
+    let added = 0, dup = 0, failed = 0, seen = 0;
+    for (const it of res.items) {
+      seen++;
+      st.textContent = '导入中… ' + seen + '/' + res.items.length + '（新增 ' + added + ' · 已在库 ' + dup + (failed ? ' · 失败 ' + failed : '') + '）';
+      try {
+        const coverBlob = await fetchYtCover(it.videoId);
+        const r = await saveCapture(state.root, {
+          title: it.title,
+          url: it.url,
+          vid: it.videoId,
+          platform: 'youtube',
+          author: it.author,
+          duration: it.duration,
+          coverBlob,
+          targetFile: file,
+        });
+        if (r.state === 'duplicate') dup++; else added++;
+      } catch (_) { failed++; }
+      await new Promise(r2 => setTimeout(r2, 120));
+    }
+    await reloadData();
+    renderContent();
+    renderOpbar();
+    const st2 = $('ytStatus');
+    if (st2) st2.textContent = '完成：新增 ' + added + ' · 已在库 ' + dup + (failed ? ' · 失败 ' + failed : '') + '（共处理 ' + seen + ' 条）';
+    toast('YouTube 导入：新增 ' + added + ' 条');
+  } catch (e) {
+    st.textContent = '导入失败：' + String(e.message || e).slice(0, 80);
+  }
+  btn.disabled = false;
+  btn.textContent = oldText;
+}
+
 async function exportWallHtml() {
   const includePrivate = !!document.querySelector('#expPriv')?.checked;
   const rows = state.entries.map(e => ({ ...e, private: isPrivateFile(e.file) }));
@@ -717,12 +788,14 @@ function renderSettings(c) {
   <div class="setrow">导出静态海报墙：<button id="expWall" class="secondary" style="margin-left:10px">导出 wall.html</button><label style="margin-left:12px"><input type="checkbox" id="expPriv"> 包含私密合集</label>　<span class="hint">生成于库根目录，浏览器直接打开</span></div>
   <div class="setrow">B 站收藏夹导入：<button id="biliLoad" class="secondary" style="margin-left:10px">读取我的收藏夹</button>　<span class="hint">需在本浏览器已登录 B 站；导入会抓取标题与封面</span></div>
   <div class="setrow" id="biliRow" hidden>目标收藏夹：<select id="biliFolder" style="background:var(--input);color:var(--text);border:1px solid var(--border2);border-radius:6px;padding:6px 8px;font:inherit;max-width:320px"></select><button id="biliImport" class="secondary" disabled style="margin-left:10px">开始导入</button><span class="hint" id="biliStatus"></span></div>
+  <div class="setrow">YouTube 导入：<input id="ytUrl" placeholder="播放列表链接（含 list=…；稍后观看填 WL）" style="background:var(--input);color:var(--text);border:1px solid var(--border2);border-radius:6px;padding:6px 8px;font:inherit;width:300px"> <button id="ytImport" class="secondary">导入</button>　<span class="hint" id="ytStatus">公开列表免登录 · 上限 500 条</span></div>
  </div>`;
   c.querySelector('#repick').addEventListener('click', pickDirectory);
   fillLibRow();
   c.querySelector('#expWall').addEventListener('click', exportWallHtml);
   c.querySelector('#biliLoad').addEventListener('click', biliLoadFolders);
   c.querySelector('#biliImport').addEventListener('click', biliImport);
+  c.querySelector('#ytImport').addEventListener('click', ytImport);
 }
 
 // ---------------- 动作 ----------------
