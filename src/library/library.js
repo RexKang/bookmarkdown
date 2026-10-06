@@ -10,6 +10,7 @@ import {
 import { safeStem, nowStamp } from '../lib/util.js';
 import { renderNote } from '../lib/mdrender.js';
 import { buildWallHtml } from '../lib/export-wall.js';
+import { fetchNav, wbiKeysFromNav, fetchFolders, fetchFolderPage } from '../lib/bili.js';
 import {
   parseEntries, renderEntry, replaceEntry, removeEntry, appendEntry,
   extractNote, upsertTopic, removeTopic, updateTopic,
@@ -518,6 +519,124 @@ async function checkLinks() {
   btn.textContent = oldText;
 }
 
+// ---------------- B 站收藏夹导入 ----------------
+let biliCtx = null;
+let biliFolders = [];
+
+async function ensureBiliPerm() {
+  const origins = ['https://api.bilibili.com/*', 'https://*.hdslb.com/*'];
+  try {
+    const missing = [];
+    for (const o of origins) {
+      if (!(await chrome.permissions.contains({ origins: [o] }))) missing.push(o);
+    }
+    if (missing.length) return !!(await chrome.permissions.request({ origins: missing }).catch(() => false));
+  } catch (_) { return true; }
+  return true;
+}
+
+function fillBiliFolders() {
+  const sel = $('biliFolder');
+  if (!sel) return;
+  sel.innerHTML = biliFolders.map(f =>
+    `<option value="${f.id}">${escapeHtml(f.title)}（${f.media_count != null ? f.media_count : '?'} 条）</option>`).join('');
+}
+
+async function biliLoadFolders() {
+  const st = $('biliStatus');
+  $('biliRow').hidden = false;
+  $('biliImport').disabled = true;
+  st.textContent = '读取中…';
+  try {
+    if (!(await ensureBiliPerm())) { st.textContent = '未获得 B 站访问权限'; return; }
+    const nav = await fetchNav();
+    const ctx = wbiKeysFromNav(nav);
+    if (!ctx.isLogin) { st.textContent = '未登录：请先在浏览器登录 bilibili.com，再回来点一次'; return; }
+    biliCtx = ctx;
+    biliFolders = await fetchFolders(ctx.mid);
+    if (!biliFolders.length) { st.textContent = '没有找到收藏夹'; return; }
+    fillBiliFolders();
+    $('biliImport').disabled = false;
+    st.textContent = '共 ' + biliFolders.length + ' 个收藏夹，选一个开始导入';
+  } catch (e) {
+    st.textContent = '读取失败：' + String(e.message || e).slice(0, 70);
+  }
+}
+
+async function importBiliItem(m, file) {
+  let coverBlob = null;
+  if (m.cover) {
+    try {
+      const r = await fetch(m.cover, { credentials: 'omit' });
+      if (r.ok) {
+        const b = await r.blob();
+        if (b.type.startsWith('image/')) coverBlob = b;
+      }
+    } catch (_) {}
+  }
+  const res = await saveCapture(state.root, {
+    title: m.title,
+    url: 'https://www.bilibili.com/video/' + m.bvid,
+    vid: m.bvid,
+    platform: 'bilibili',
+    author: (m.upper && m.upper.name) || null,
+    duration: m.duration || null,
+    coverBlob,
+    targetFile: file,
+  });
+  return res.state;
+}
+
+async function biliImport() {
+  if (!biliCtx || !biliFolders.length) return;
+  const folder = biliFolders.find(f => String(f.id) === $('biliFolder').value);
+  if (!folder) return;
+  const st = $('biliStatus');
+  const btn = $('biliImport');
+  btn.disabled = true;
+  $('biliLoad').disabled = true;
+  try {
+    const filePart = ('B站·' + folder.title).replace(/[\\/:*?"<>|\r\n]/g, '').slice(0, 60) || ('bili-' + folder.id);
+    const file = filePart + '.md';
+    if ((await readTextFile(state.root, file)) === null) {
+      await writeFile(state.root, file, '# ' + filePart + '\n');
+    }
+    let idxText = (await readTextFile(state.root, INDEX_FILE)) ?? '';
+    const has = (await readIndexTopics(state.root)).some(t => t.file === file);
+    if (!has) {
+      idxText = upsertTopic(idxText, { id: 'c-bili-' + folder.id, title: filePart, file, parent: null, order: 999 }).text;
+      await writeFile(state.root, INDEX_FILE, idxText);
+    }
+    let pn = 1, seen = 0, added = 0, dup = 0, failed = 0;
+    while (pn <= 100) {
+      const { medias, hasMore } = await fetchFolderPage(folder.id, pn, biliCtx.imgKey, biliCtx.subKey);
+      if (!medias.length) break;
+      for (const m of medias) {
+        seen++;
+        st.textContent = '导入中… ' + seen + ' 条（新增 ' + added + ' · 已在库 ' + dup + (failed ? ' · 失败 ' + failed : '') + '）';
+        try {
+          const r = await importBiliItem(m, file);
+          if (r === 'duplicate') dup++; else added++;
+        } catch (_) { failed++; }
+        await new Promise(r => setTimeout(r, 120));
+      }
+      if (!hasMore) break;
+      pn++;
+    }
+    await reloadData();
+    renderContent();
+    renderOpbar();
+    fillBiliFolders();
+    const st2 = $('biliStatus');
+    if (st2) st2.textContent = '完成：新增 ' + added + ' · 已在库 ' + dup + (failed ? ' · 失败 ' + failed : '') + '（共处理 ' + seen + ' 条）';
+    toast('B 站收藏夹导入：新增 ' + added + ' 条');
+  } catch (e) {
+    st.textContent = '导入失败：' + String(e.message || e).slice(0, 70);
+  }
+  btn.disabled = false;
+  $('biliLoad').disabled = false;
+}
+
 async function exportWallHtml() {
   const includePrivate = !!document.querySelector('#expPriv')?.checked;
   const rows = state.entries.map(e => ({ ...e, private: isPrivateFile(e.file) }));
@@ -537,9 +656,13 @@ function renderSettings(c) {
   <div class="setrow">数据形态：Markdown 条目 + <code>thumbnails/</code> 封面快照　<span class="hint">建议给库目录建 git 仓库留底</span></div>
   <div class="setrow">更换库目录：<button id="repick" class="secondary" style="margin-left:10px">重新选择目录…</button></div>
   <div class="setrow">导出静态海报墙：<button id="expWall" class="secondary" style="margin-left:10px">导出 wall.html</button><label style="margin-left:12px"><input type="checkbox" id="expPriv"> 包含私密合集</label>　<span class="hint">生成于库根目录，浏览器直接打开</span></div>
+  <div class="setrow">B 站收藏夹导入：<button id="biliLoad" class="secondary" style="margin-left:10px">读取我的收藏夹</button>　<span class="hint">需在本浏览器已登录 B 站；导入会抓取标题与封面</span></div>
+  <div class="setrow" id="biliRow" hidden>目标收藏夹：<select id="biliFolder" style="background:var(--input);color:var(--text);border:1px solid var(--border2);border-radius:6px;padding:6px 8px;font:inherit;max-width:320px"></select><button id="biliImport" class="secondary" disabled style="margin-left:10px">开始导入</button><span class="hint" id="biliStatus"></span></div>
  </div>`;
   c.querySelector('#repick').addEventListener('click', pickDirectory);
   c.querySelector('#expWall').addEventListener('click', exportWallHtml);
+  c.querySelector('#biliLoad').addEventListener('click', biliLoadFolders);
+  c.querySelector('#biliImport').addEventListener('click', biliImport);
 }
 
 // ---------------- 动作 ----------------
