@@ -6,7 +6,7 @@ Right-click any video page to save it. Every bookmark is written into **plain Ma
 
 [中文说明 →](README.md)
 
-## Features (v0.3.0)
+## Features (v0.3.1)
 
 - **One-click capture**: right-click any page → "Save to BookmarkDown"; images and links work too
 - **Metadata extraction**: deep support for Bilibili / YouTube (title, uploader, duration); generic Open Graph fallback everywhere else
@@ -23,6 +23,8 @@ Right-click any video page to save it. Every bookmark is written into **plain Ma
 - **Bilibili favorites import**: read your Bilibili favorite folders from the settings page and import them in bulk (covers fetched, deduped, titles cleaned)
 - **Dead-link detection**: batch "Check links" marks 404/refused as broken and 403/rate-limited as uncertain; results are written back and badged
 - **Static HTML export**: one click generates `wall.html` (with built-in search, private collections excluded by default) for browsing without the extension
+- **Multiple libraries**: keep several library folders in Settings and switch with one click; "Add library" just adds it to the list (removing never touches files)
+- **Collection hierarchy**: nest collections under a parent (indented in the sidebar); "Move level" in collection management; deleting a collection promotes its children
 - **Detail card**: click an item for details; click the cover for fullscreen viewing (click anywhere / Esc to close)
 - **Manual entry**: for content you can't capture (in-app links, canvas, restricted pages) — paste a link; cover via click / drag & drop / Ctrl+V anywhere
 - **Deduplication**: the same video / URL is recognized; existing entries can be upgraded with a cover
@@ -81,6 +83,8 @@ Requires Chrome / Edge (Chromium) ≥ 122.
 - **Bilibili import**: Settings → "Read my favorites" → pick a folder → "Import" (requires a Bilibili login; creates a "B站·…" collection)
 - **Dead links**: Batch manage → select items → "Check links"; a red badge means broken
 - **Export**: Settings → "Export wall.html" → open `wall.html` from your library folder
+- **Libraries**: Settings → "Libraries" row, click a name to switch; "Add library" appends a folder
+- **Hierarchy**: Collections → select → "Move level ▾" → nest under a parent / move to top
 - **Exclusions**: edit `settings.json` inside your library
 
 ## Development & tests
@@ -100,8 +104,9 @@ node test/fs.test.mjs   # storage layer: init, dedupe, target-collection writes 
 
 ## Roadmap
 
-- **v0.3.0 (current)**: Bilibili favorites import, dead-link detection, static HTML export
-- v0.3.1 (planned): subfolders, multiple libraries, new-tab replacement
+- **v0.3.1 (current)**: subfolders (collection hierarchy), multiple libraries
+- v0.4.0 (planned): YouTube playlist import (Watch Later / Liked; page-data parsing + per-site permission)
+- **v0.3.0**: Bilibili favorites import, dead-link detection, static HTML export
 - **v0.2.0**: tags / notes + Markdown rendering, cover re-fetch, popup quick search, side panel, keyboard nav
 - **v0.1.1**: edit dialog, batch manage mode, light/dark themes, private collections, cover quality upgrade (originals up to 1080P kept), Ctrl+V paste anywhere
 - **v0.1.0**: capture, dual-channel covers, Markdown file library, poster wall, detail card, manual entry
