@@ -253,3 +253,8 @@ footer.statusbar { border-top: 1px solid var(--line); padding: 10px 22px; color:
 .frow > textarea:focus { border-color: var(--focus); }
 
 .card.kbd { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.badge.lbad { left: 8px; bottom: 8px; background: #b3261e; color: #fff; }
+.badge.lbad.unk { background: #574a1d; color: #ffdf8a; }
+.lbadgeList { background: #b3261e; color: #fff; border-radius: 5px; font-size: 11px; padding: 1px 7px; margin-left: 6px; vertical-align: 1px; }
+.lbadgeList.unk { background: #574a1d; color: #ffdf8a; }

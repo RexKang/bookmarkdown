@@ -7,7 +7,7 @@ import {
   ensureLibrary, listCollectionFiles, readTextFile, writeFile,
   readIndexTopics, INDEX_FILE, INBOX_ID, saveCapture, processCover, THUMB_DIR,
 } from '../lib/fs.js';
-import { safeStem } from '../lib/util.js';
+import { safeStem, nowStamp } from '../lib/util.js';
 import { renderNote } from '../lib/mdrender.js';
 import { buildWallHtml } from '../lib/export-wall.js';
 import {
@@ -240,7 +240,7 @@ function refreshCollPrivacyBtn() {
 function refreshSelUI() {
   const n = state.selEntries.size;
   $('selInfo').textContent = '已选 ' + n + ' 条';
-  for (const id of ['btnDelEntry', 'btnAuthor', 'btnCopyTo', 'btnMoveTo']) $(id).disabled = n === 0;
+  for (const id of ['btnDelEntry', 'btnAuthor', 'btnCopyTo', 'btnMoveTo', 'btnCheck']) $(id).disabled = n === 0;
 }
 
 function toggleEntrySelection(key) {
@@ -262,6 +262,7 @@ function renderOpbar() {
   $('btnAuthor').hidden = !batch;
   $('btnCopyTo').hidden = !batch;
   $('btnMoveTo').hidden = !batch;
+  $('btnCheck').hidden = !batch;
   $('btnNewColl').hidden = !isColl;
   $('btnDelColl').hidden = !isColl;
   $('btnPrivacy').hidden = !isColl;
@@ -327,6 +328,7 @@ function gridHtml(list) {
       ? `<img data-cover="${escapeHtml(m.thumbnail)}" alt="">`
       : `<div class="grad" style="background:linear-gradient(135deg,#1d2433,#131722)">${escapeHtml(PLATFORM_LABEL[m.platform] || '')}</div>`}
    <span class="badge coll">${escapeHtml(e.fileTitle)}</span>
+   ${m.linkState === 'dead' ? '<span class="badge lbad">已失效</span>' : m.linkState === 'unknown' ? '<span class="badge lbad unk">存疑</span>' : ''}
   </div>
   <div class="ctitle">${escapeHtml(m.title || m.url)}</div>
   <div class="cmeta"><span class="stc" data-stkey="${escapeHtml(e.key)}"><span class="dot ${STATUS_DOT[status]}"></span>${status}</span><span>·</span><span style="overflow:hidden;text-overflow:ellipsis">${escapeHtml(meta)}</span></div>
@@ -347,7 +349,7 @@ function listHtml(list) {
   <td>${m.thumbnail
       ? `<img class="mini" data-cover="${escapeHtml(m.thumbnail)}" alt="">`
       : '<span class="nomark">无图</span>'}</td>
-  <td><div class="rname">${escapeHtml(m.title || m.url)}</div><div class="rsub">${escapeHtml([m.author, fmtDuration(m.duration)].filter(Boolean).join(' · '))}</div></td>
+  <td><div class="rname">${escapeHtml(m.title || m.url)}${m.linkState === 'dead' ? ' <span class="lbadgeList">已失效</span>' : m.linkState === 'unknown' ? ' <span class="lbadgeList unk">存疑</span>' : ''}</div><div class="rsub">${escapeHtml([m.author, fmtDuration(m.duration)].filter(Boolean).join(' · '))}</div></td>
   <td><span class="plat">${escapeHtml(PLATFORM_LABEL[m.platform] || m.platform || '')}</span></td>
   <td><span class="colltag">${escapeHtml(e.fileTitle)}</span></td>
   <td><span class="${STATUS_CLASS[status]} stclick" data-stkey="${escapeHtml(e.key)}">${status}</span></td>
@@ -425,6 +427,95 @@ function renderCollections(c) {
   }));
   c.querySelector('#newCard').addEventListener('click', openNewCollForm);
   fillCovers(c);
+}
+
+function linkStateText(m) {
+  if (!m.checked && !m.linkState) return '';
+  const when = m.checked ? '（' + m.checked + '）' : '';
+  if (m.linkState === 'dead') return '已失效' + when;
+  if (m.linkState === 'unknown') return '存疑：403 / 限流，未必失效' + when;
+  return '正常' + when;
+}
+
+async function probeUrl(url) {
+  try {
+    const resp = await fetch(url, { method: 'GET', credentials: 'omit', cache: 'no-store',
+      signal: AbortSignal.timeout(12000) });
+    try { if (resp.body) await resp.body.cancel(); } catch (_) {}
+    if (resp.status === 404 || resp.status === 410) return 'dead';
+    if (resp.status >= 400) return [403, 405, 429].includes(resp.status) ? 'unknown' : 'dead';
+    return 'ok';
+  } catch (_) {
+    return 'dead';
+  }
+}
+
+async function checkLinks() {
+  const targets = state.entries.filter(e => state.selEntries.has(e.key) && /^https?:/i.test(e.meta.url || ''));
+  if (!targets.length) { toast('选中的条目没有可检测的链接'); return; }
+  const origins = [...new Set(targets.map(e => { try { return new URL(e.meta.url).origin + '/*'; } catch (_) { return null; } }).filter(Boolean))];
+  try {
+    const missing = [];
+    for (const o of origins) {
+      if (!(await chrome.permissions.contains({ origins: [o] }))) missing.push(o);
+    }
+    if (missing.length) {
+      const granted = await chrome.permissions.request({ origins: missing.slice(0, 25) }).catch(() => false);
+      if (!granted) { toast('未获得站点权限，无法检测'); return; }
+    }
+  } catch (_) { /* API 不可用时直接尝试（受 CORS 约束） */ }
+  const btn = $('btnCheck');
+  const oldText = btn.textContent;
+  btn.disabled = true;
+  const results = [];
+  let done = 0;
+  const runOne = async () => {
+    while (true) {
+      const e = targets.shift();
+      if (!e) return;
+      results.push({ key: e.key, file: e.file, state: await probeUrl(e.meta.url) });
+      done++;
+      btn.textContent = '检测中… ' + done + '/' + (done + targets.length);
+    }
+  };
+  try {
+    const workers = Array.from({ length: Math.min(4, targets.length) }, runOne);
+    await Promise.all(workers);
+    const now = nowStamp();
+    const byFile = new Map();
+    for (const r of results) {
+      if (!byFile.has(r.file)) byFile.set(r.file, []);
+      byFile.get(r.file).push(r);
+    }
+    for (const [file, list] of byFile) {
+      let text = await readTextFile(state.root, file);
+      if (text === null) continue;
+      for (const r of list) {
+        const fresh = parseEntries(text).find(x => x.key === r.key);
+        if (!fresh) continue;
+        const meta = { ...fresh.meta, checked: now };
+        if (r.state === 'dead') meta.linkState = 'dead';
+        else if (r.state === 'unknown') meta.linkState = 'unknown';
+        else delete meta.linkState;
+        const { text: updated } = replaceEntry(text, r.key, renderEntry(meta, extractNote(fresh.body)));
+        text = updated;
+      }
+      await writeFile(state.root, file, text);
+    }
+    let okN = 0, deadN = 0, unkN = 0;
+    for (const r of results) {
+      if (r.state === 'ok') okN++;
+      else if (r.state === 'dead') deadN++;
+      else unkN++;
+    }
+    await reloadData();
+    renderAll();
+    toast('检测完成：正常 ' + okN + ' · 失效 ' + deadN + (unkN ? ' · 存疑 ' + unkN : ''));
+  } catch (err) {
+    toast('检测失败：' + String(err.message || err).slice(0, 50));
+  }
+  btn.disabled = false;
+  btn.textContent = oldText;
 }
 
 async function exportWallHtml() {
@@ -602,6 +693,7 @@ async function openDetail(entry) {
     ['收藏于', m.collected || ''],
     ['链接', m.url || ''],
     ['标签', (m.tags || []).join(', ')],
+    ['链接状态', linkStateText(m)],
   ].filter(r => r[1]);
   $('dRows').innerHTML = rows.map(([k, v]) => `<div class="drow"><b>${k}</b><span>${escapeHtml(v)}</span></div>`).join('');
   let note = '';
@@ -960,6 +1052,7 @@ async function refetchEntry(e) {
   }
 }
 $('dFetch').addEventListener('click', () => { if (detailEntry) refetchEntry(detailEntry); });
+$('btnCheck').addEventListener('click', checkLinks);
 $('dClose').addEventListener('click', closeDetail);
 $('dDel').addEventListener('click', () => {
   if (!detailEntry) return;
