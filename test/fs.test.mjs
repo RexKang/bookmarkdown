@@ -115,6 +115,15 @@ const r6 = await saveCapture(root, {
 });
 ok(r6.state === 'saved' && r6.file === '默认.md', '目标文件不存在时回落默认容器');
 
+console.log('· 合集 id/parent 透传');
+const filesP0 = await listCollectionFiles(root);
+ok(filesP0.find(f => f.file === '默认.md')?.id === 'inbox', 'id 透传（默认容器）');
+ok(filesP0.find(f => f.file === '散装.md')?.parent === null, '散装文件 parent 为 null');
+const idxH = updateTopic(root.map.get('index.md')._content, { file: '默认.md' }, { parent: 'c-hw' }).text;
+root.map.get('index.md')._content = idxH;
+const filesH = await listCollectionFiles(root);
+ok(filesH.find(f => f.file === '默认.md')?.parent === 'c-hw', 'parent 透传');
+
 console.log('· 合集私密属性透传');
 const idxP = updateTopic(root.map.get('index.md')._content, { file: '默认.md' }, { private: true }).text;
 root.map.get('index.md')._content = idxP;

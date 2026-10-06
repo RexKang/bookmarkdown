@@ -65,6 +65,7 @@
       <button id="btnNewColl" hidden>＋ 新建合集</button>
       <button id="btnDelColl" class="secondary" hidden disabled>删除合集</button>
       <button id="btnPrivacy" class="secondary" hidden disabled>设置为私密</button>
+      <button id="btnHier" class="secondary" hidden disabled>调整层级 ▾</button>
       <span class="hint" id="selInfo">已选 0 条</span>
       <div class="inlineform" id="authorForm" hidden>
         <input id="authorInput" placeholder="输入作者名">
@@ -81,6 +82,11 @@
         <input id="newCollName" placeholder="合集名">
         <button id="newCollApply">创建</button>
         <button id="newCollCancel" class="secondary">取消</button>
+      </div>
+      <div class="inlineform" id="hierForm" hidden>
+        <select id="parentSelect"></select>
+        <button id="hierApply">应用</button>
+        <button id="hierCancel" class="secondary">取消</button>
       </div>
     </div>
     <div class="viewtitle"><b id="vtName">全部条目</b><span id="vtCount"></span></div>

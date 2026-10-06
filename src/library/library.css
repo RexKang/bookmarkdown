@@ -258,3 +258,7 @@ footer.statusbar { border-top: 1px solid var(--line); padding: 10px 22px; color:
 .badge.lbad.unk { background: #574a1d; color: #ffdf8a; }
 .lbadgeList { background: #b3261e; color: #fff; border-radius: 5px; font-size: 11px; padding: 1px 7px; margin-left: 6px; vertical-align: 1px; }
 .lbadgeList.unk { background: #574a1d; color: #ffdf8a; }
+
+.subitem.child { padding-left: 36px; }
+.subitem.child > span::before { content: '└'; margin-right: 6px; color: var(--muted2); }
+.childmark { margin-right: 4px; color: var(--muted2); font-weight: 400; }

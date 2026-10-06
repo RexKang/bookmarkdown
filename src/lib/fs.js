@@ -91,14 +91,15 @@ export async function listCollectionFiles(root) {
   for (const t of await readIndexTopics(root)) {
     if (t.file && /\.md$/i.test(t.file) && !seen.has(t.file)) {
       seen.add(t.file);
-      out.push({ file: t.file, title: t.title || t.file.replace(/\.md$/i, ''), private: t.private === true });
+      out.push({ file: t.file, title: t.title || t.file.replace(/\.md$/i, ''), private: t.private === true,
+        id: t.id || null, parent: t.parent || null });
     }
   }
   for await (const [name, handle] of root.entries()) {
     if (handle.kind !== 'file' || seen.has(name)) continue;
     if (!/\.md$/i.test(name) || name === INDEX_FILE || name.toLowerCase() === 'readme.md') continue;
     seen.add(name);
-    out.push({ file: name, title: name.replace(/\.md$/i, ''), private: false });
+    out.push({ file: name, title: name.replace(/\.md$/i, ''), private: false, id: null, parent: null });
   }
   return out;
 }

@@ -102,7 +102,7 @@ function confirmBox({ title, text, okText = '删除', onOk }) {
 $('modalCancel').addEventListener('click', () => { $('modal').hidden = true; });
 
 function hideForms() {
-  for (const id of ['authorForm', 'collForm', 'newCollForm']) $(id).hidden = true;
+  for (const id of ['authorForm', 'collForm', 'newCollForm', 'hierForm']) $(id).hidden = true;
 }
 
 // ---------------- 数据 ----------------
@@ -198,9 +198,16 @@ function renderAll() {
 function renderSidebar() {
   const counts = new Map();
   for (const e of state.entries) counts.set(e.file, (counts.get(e.file) || 0) + 1);
-  $('collist').innerHTML = collectionFiles().map(f =>
-    `<div class="subitem${state.view === 'wall' && state.collection === f.file ? ' on' : ''}" data-file="${escapeHtml(f.file)}">` +
-    `<span>${f.private ? '<span class="lock">🔒</span>' : ''}${escapeHtml(f.title)}</span><b>${counts.get(f.file) || 0}</b></div>`).join('');
+  const colls = collectionFiles();
+  const topIds = new Set(colls.filter(f => !f.parent).map(f => f.id));
+  const itemHtml = (f, child) =>
+    `<div class="subitem${child ? ' child' : ''}${state.view === 'wall' && state.collection === f.file ? ' on' : ''}" data-file="${escapeHtml(f.file)}">` +
+    `<span>${f.private ? '<span class="lock">🔒</span>' : ''}${escapeHtml(f.title)}</span><b>${counts.get(f.file) || 0}</b></div>`;
+  const tops = colls.filter(f => !f.parent);
+  const orphans = colls.filter(f => f.parent && !topIds.has(f.parent));
+  $('collist').innerHTML = tops.map(f =>
+    itemHtml(f, false) + colls.filter(k => k.parent === f.id).map(k => itemHtml(k, true)).join('')
+  ).join('') + orphans.map(f => itemHtml(f, false)).join('');
   $('collist').querySelectorAll('.subitem').forEach(el => el.addEventListener('click', () => {
     state.view = 'wall';
     state.collection = el.dataset.file;
@@ -267,10 +274,12 @@ function renderOpbar() {
   $('btnNewColl').hidden = !isColl;
   $('btnDelColl').hidden = !isColl;
   $('btnPrivacy').hidden = !isColl;
+  $('btnHier').hidden = !isColl;
   $('selInfo').hidden = state.view === 'settings' || (isWall && !batch);
   if (isColl) {
     $('selInfo').textContent = '已选 ' + state.selColls.size + ' 个';
     $('btnDelColl').disabled = state.selColls.size === 0;
+    $('btnHier').disabled = state.selColls.size === 0;
     refreshCollPrivacyBtn();
   } else if (batch) {
     refreshSelUI();
@@ -407,8 +416,8 @@ function renderCollections(c) {
    <span class="cnt">${countOf(f.file)} 条</span>
   </div>
   <div class="cbody">
-   <div class="cname">${f.private ? '<span class="lock">🔒</span>' : ''}${escapeHtml(f.title)}</div>
-   <div class="cmeta2">${escapeHtml(f.file)}</div>
+   <div class="cname">${f.parent ? '<span class="childmark">↳</span>' : ''}${f.private ? '<span class="lock">🔒</span>' : ''}${escapeHtml(f.title)}</div>
+   <div class="cmeta2">${f.parent ? '子合集 · 隶属于 ' + escapeHtml((state.files.find(x => x.id === f.parent) || {}).title || '？') : escapeHtml(f.file)}</div>
   </div>
  </div>`).join('') + '<div class="ccard newcard" id="newCard">＋ 新建合集</div></div>';
 
@@ -1280,6 +1289,58 @@ $('btnDelEntry').addEventListener('click', () => {
   });
 });
 
+async function promoteOrphans(parentFiles) {
+  const topics = await readIndexTopics(state.root);
+  const ids = parentFiles.map(f => (topics.find(t => t.file === f) || {}).id).filter(Boolean);
+  if (!ids.length) return 0;
+  let text = (await readTextFile(state.root, INDEX_FILE)) ?? '';
+  let n = 0;
+  for (const c of topics.filter(t => t.parent && ids.includes(t.parent))) {
+    text = updateTopic(text, { id: c.id }, { parent: null }).text;
+    n++;
+  }
+  if (n) await writeFile(state.root, INDEX_FILE, text);
+  return n;
+}
+
+function openHierForm() {
+  hideForms();
+  const selected = [...state.selColls];
+  const tops = collectionFiles().filter(f => f.id && !f.parent && !selected.includes(f.file));
+  $('parentSelect').innerHTML = '<option value="">顶层（不隶属于任何合集）</option>' +
+    tops.map(f => `<option value="${escapeHtml(f.id)}">${escapeHtml(f.title)}</option>`).join('');
+  $('hierForm').hidden = false;
+}
+
+$('btnHier').addEventListener('click', openHierForm);
+$('hierCancel').addEventListener('click', hideForms);
+$('hierApply').addEventListener('click', async () => {
+  const targetId = $('parentSelect').value;
+  const selected = [...state.selColls];
+  if (!selected.length) return;
+  let text = (await readTextFile(state.root, INDEX_FILE)) ?? '';
+  const topics = await readIndexTopics(state.root);
+  const byFile = f => topics.find(t => t.file === f);
+  let promoted = 0;
+  for (const f of selected) {
+    const t = byFile(f);
+    if (!t) continue;
+    if (targetId) {
+      for (const c of topics.filter(x => x.parent === t.id)) {
+        text = updateTopic(text, { id: c.id }, { parent: null }).text;
+        promoted++;
+      }
+    }
+    text = updateTopic(text, { id: t.id }, { parent: targetId || null }).text;
+  }
+  await writeFile(state.root, INDEX_FILE, text);
+  hideForms();
+  state.selColls.clear();
+  await reloadData();
+  renderAll();
+  toast((targetId ? '已设为子合集' : '已移到顶层') + (promoted ? '（' + promoted + ' 个子合集提升到顶层）' : ''));
+});
+
 function openNewCollForm() {
   hideForms();
   $('newCollName').value = '';
@@ -1319,7 +1380,7 @@ $('btnDelColl').addEventListener('click', () => {
   confirmBox({
     title: '删除合集',
     text: `删除 ${names}？\n对应 .md 文件将从库中移出；其中 ${cnt} 条记录会移入「默认」（不会直接丢失）。`,
-    onOk: deleteSelectedColls,
+    onOk: async () => { await promoteOrphans(files); await deleteSelectedColls(); },
   });
 });
 
