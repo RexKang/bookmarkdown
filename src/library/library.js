@@ -9,6 +9,7 @@ import {
 } from '../lib/fs.js';
 import { safeStem } from '../lib/util.js';
 import { renderNote } from '../lib/mdrender.js';
+import { buildWallHtml } from '../lib/export-wall.js';
 import {
   parseEntries, renderEntry, replaceEntry, removeEntry, appendEntry,
   extractNote, upsertTopic, removeTopic, updateTopic,
@@ -426,6 +427,17 @@ function renderCollections(c) {
   fillCovers(c);
 }
 
+async function exportWallHtml() {
+  const includePrivate = !!document.querySelector('#expPriv')?.checked;
+  const rows = state.entries.map(e => ({ ...e, private: isPrivateFile(e.file) }));
+  const html = buildWallHtml(rows, {
+    generated: new Date().toLocaleString('zh-CN', { hour12: false }),
+    includePrivate,
+  });
+  await writeFile(state.root, 'wall.html', html);
+  toast('已导出 wall.html' + (includePrivate ? '（含私密）' : '（不含私密合集）') + ' → 库根目录');
+}
+
 function renderSettings(c) {
   c.innerHTML = `
  <div style="max-width:680px">
@@ -433,8 +445,10 @@ function renderSettings(c) {
   <div class="setrow">条目：<b>${state.entries.length}</b> 条 ｜ 合集：<b>${collectionFiles().length}</b> 个</div>
   <div class="setrow">数据形态：Markdown 条目 + <code>thumbnails/</code> 封面快照　<span class="hint">建议给库目录建 git 仓库留底</span></div>
   <div class="setrow">更换库目录：<button id="repick" class="secondary" style="margin-left:10px">重新选择目录…</button></div>
+  <div class="setrow">导出静态海报墙：<button id="expWall" class="secondary" style="margin-left:10px">导出 wall.html</button><label style="margin-left:12px"><input type="checkbox" id="expPriv"> 包含私密合集</label>　<span class="hint">生成于库根目录，浏览器直接打开</span></div>
  </div>`;
   c.querySelector('#repick').addEventListener('click', pickDirectory);
+  c.querySelector('#expWall').addEventListener('click', exportWallHtml);
 }
 
 // ---------------- 动作 ----------------
