@@ -105,7 +105,7 @@ node test/fs.test.mjs   # storage layer: init, dedupe, target-collection writes 
 ## Roadmap
 
 - **v0.3.1 (current)**: subfolders (collection hierarchy), multiple libraries
-- v0.4.0 (planned): YouTube playlist import (Watch Later / Liked; page-data parsing + per-site permission)
+- v0.4.0 (planned): YouTube playlist import (including Watch Later; page-data parsing + per-site permission)
 - **v0.3.0**: Bilibili favorites import, dead-link detection, static HTML export
 - **v0.2.0**: tags / notes + Markdown rendering, cover re-fetch, popup quick search, side panel, keyboard nav
 - **v0.1.1**: edit dialog, batch manage mode, light/dark themes, private collections, cover quality upgrade (originals up to 1080P kept), Ctrl+V paste anywhere
