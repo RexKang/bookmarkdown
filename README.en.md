@@ -6,7 +6,7 @@ Right-click any video page to save it. Every bookmark is written into **plain Ma
 
 [中文说明 →](README.md)
 
-## Features (v0.3.1)
+## Features (v0.4.0)
 
 - **One-click capture**: right-click any page → "Save to BookmarkDown"; images and links work too
 - **Metadata extraction**: deep support for Bilibili / YouTube (title, uploader, duration); generic Open Graph fallback everywhere else
@@ -25,6 +25,7 @@ Right-click any video page to save it. Every bookmark is written into **plain Ma
 - **Static HTML export**: one click generates `wall.html` (with built-in search, private collections excluded by default) for browsing without the extension
 - **Multiple libraries**: keep several library folders in Settings and switch with one click; "Add library" just adds it to the list (removing never touches files)
 - **Collection hierarchy**: nest collections under a parent (indented in the sidebar); "Move level" in collection management; deleting a collection promotes its children
+- **YouTube import**: paste a playlist link to import (use `WL` for Watch Later); titles / channels / durations / covers fetched automatically, up to 500 items
 - **Detail card**: click an item for details; click the cover for fullscreen viewing (click anywhere / Esc to close)
 - **Manual entry**: for content you can't capture (in-app links, canvas, restricted pages) — paste a link; cover via click / drag & drop / Ctrl+V anywhere
 - **Deduplication**: the same video / URL is recognized; existing entries can be upgraded with a cover
@@ -85,6 +86,7 @@ Requires Chrome / Edge (Chromium) ≥ 122.
 - **Export**: Settings → "Export wall.html" → open `wall.html` from your library folder
 - **Libraries**: Settings → "Libraries" row, click a name to switch; "Add library" appends a folder
 - **Hierarchy**: Collections → select → "Move level ▾" → nest under a parent / move to top
+- **YouTube**: Settings → "YouTube import" → paste a playlist link (containing `list=…`) → Import; enter `WL` for Watch Later (sign-in required)
 - **Exclusions**: edit `settings.json` inside your library
 
 ## Development & tests
@@ -104,8 +106,8 @@ node test/fs.test.mjs   # storage layer: init, dedupe, target-collection writes 
 
 ## Roadmap
 
-- **v0.3.1 (current)**: subfolders (collection hierarchy), multiple libraries
-- v0.4.0 (planned): YouTube playlist import (including Watch Later; page-data parsing + per-site permission)
+- **v0.4.0 (current)**: YouTube playlist import (playlists / Watch Later; page-data parsing + per-site permission)
+- **v0.3.1**: subfolders (collection hierarchy), multiple libraries
 - **v0.3.0**: Bilibili favorites import, dead-link detection, static HTML export
 - **v0.2.0**: tags / notes + Markdown rendering, cover re-fetch, popup quick search, side panel, keyboard nav
 - **v0.1.1**: edit dialog, batch manage mode, light/dark themes, private collections, cover quality upgrade (originals up to 1080P kept), Ctrl+V paste anywhere
