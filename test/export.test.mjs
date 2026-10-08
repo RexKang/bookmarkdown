@@ -32,6 +32,10 @@ const h2 = buildWallHtml(E, { includePrivate: true, generated: '' });
 ok(h2.includes('私密条目'), '包含私密合集生效');
 ok(h2.includes('共 3 条'), '计数 3 条');
 
+console.log('· 1:1 封面留白（v0.4.1）');
+ok(h2.includes('.cv img.fit-sq'), '导出含留白样式');
+ok(h2.includes("querySelectorAll('.cv img')"), '导出含留白脚本');
+
 console.log('· 空库');
 const h3 = buildWallHtml([], {});
 ok(h3.includes('没有可展示的条目'), '空库占位');

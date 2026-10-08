@@ -6,11 +6,12 @@ Right-click any video page to save it. Every bookmark is written into **plain Ma
 
 [中文说明 →](README.md)
 
-## Features (v0.4.0)
+## Features (v0.4.1)
 
 - **One-click capture**: right-click any page → "Save to BookmarkDown"; images and links work too
 - **Metadata extraction**: deep support for Bilibili / YouTube (title, uploader, duration); generic Open Graph fallback everywhere else
 - **Dual-channel covers**: in-page fetch first; visible-area screenshot as fallback; originals kept as-is up to 1080P, larger ones scaled to 1920px long side (WebP q92) — quality first
+- **Cover display**: square (1:1) covers shown in full with side padding (never cropped or upscaled); other ratios still fill the card
 - **Zero host_permissions**: no install-time permission warnings; access to the current tab is granted only via activeTab, only at the moment you capture
 - **Poster wall**: left sidebar (Wall / Default / Collections / Settings), grid & list views, search, status filter, collections; light & dark themes
 - **Private collections**: mark a collection private — its items stay out of the Wall; a lock icon marks it in the sidebar
@@ -106,7 +107,8 @@ node test/fs.test.mjs   # storage layer: init, dedupe, target-collection writes 
 
 ## Roadmap
 
-- **v0.4.0 (current)**: YouTube playlist import (playlists / Watch Later; page-data parsing + per-site permission)
+- **v0.4.1 (current)**: square (1:1) covers shown in full with side padding
+- **v0.4.0**: YouTube playlist import (playlists / Watch Later; page-data parsing + per-site permission)
 - **v0.3.1**: subfolders (collection hierarchy), multiple libraries
 - **v0.3.0**: Bilibili favorites import, dead-link detection, static HTML export
 - **v0.2.0**: tags / notes + Markdown rendering, cover re-fetch, popup quick search, side panel, keyboard nav

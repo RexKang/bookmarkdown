@@ -126,8 +126,22 @@ async function coverUrl(relPath) {
 function fillCovers(scope) {
   scope.querySelectorAll('img[data-cover]').forEach(async img => {
     const url = await coverUrl(img.dataset.cover);
-    if (url) img.src = url;
+    if (url) {
+      img.src = url;
+      bindSquareCover(img);
+    }
   });
+}
+
+/** 1:1（±4%）封面改为 contain 双侧留白：保持完整，不裁切放大填满 16:9 */
+function bindSquareCover(img) {
+  const apply = () => {
+    if (!img.naturalWidth || !img.naturalHeight) return;
+    const r = img.naturalWidth / img.naturalHeight;
+    img.classList.toggle('fit-sq', r > 0.96 && r < 1.04);
+  };
+  if (img.complete && img.naturalWidth) apply();
+  else img.addEventListener('load', apply, { once: true });
 }
 
 function invalidate(file) {

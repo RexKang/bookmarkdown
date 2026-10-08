@@ -24,7 +24,18 @@ async function render() {
     const e = list[i];
     it.addEventListener('click', () => { if (e.meta.url) chrome.tabs.create({ url: e.meta.url }); });
     const img = it.querySelector('img.cv');
-    if (img && e.meta.thumbnail && rootRef) thumbUrl(rootRef, e.meta.thumbnail).then(u => { if (u) img.src = u; });
+    if (img && e.meta.thumbnail && rootRef) thumbUrl(rootRef, e.meta.thumbnail).then(u => {
+      if (u) {
+        img.src = u;
+        const apply = () => {
+          if (!img.naturalWidth || !img.naturalHeight) return;
+          const r = img.naturalWidth / img.naturalHeight;
+          img.classList.toggle('fit-sq', r > 0.96 && r < 1.04);
+        };
+        if (img.complete && img.naturalWidth) apply();
+        else img.addEventListener('load', apply, { once: true });
+      }
+    });
   });
 }
 $('q').addEventListener('input', render);

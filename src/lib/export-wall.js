@@ -49,6 +49,7 @@ export function buildWallHtml(entries, { title = 'BookmarkDown 海报墙', gener
   .card:hover { border-color: #2a3143; }
   .cv { display: block; aspect-ratio: 16 / 9; background: #1d2433; overflow: hidden; }
   .cv img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cv img.fit-sq { object-fit: contain; background: #1d2433; }
   .cv .grad { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #96a0b2; font-weight: 700; }
   .bd { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 4px; }
   .t { color: #f2f4f8; font-weight: 600; text-decoration: none; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -79,6 +80,14 @@ ${cards || '  <div class="empty">（空）没有可展示的条目</div>'}
     cards.forEach(function (c) {
       c.style.display = !s || (c.getAttribute('data-s') || '').indexOf(s) >= 0 ? '' : 'none';
     });
+  });
+  [].slice.call(document.querySelectorAll('.cv img')).forEach(function (img) {
+    var ap = function () {
+      if (!img.naturalWidth || !img.naturalHeight) return;
+      var r = img.naturalWidth / img.naturalHeight;
+      if (r > 0.96 && r < 1.04) img.classList.add('fit-sq');
+    };
+    if (img.complete && img.naturalWidth) ap(); else img.addEventListener('load', ap);
   });
 })();
 </script>
