@@ -6,7 +6,7 @@ Right-click any video page to save it. Every bookmark is written into **plain Ma
 
 [中文说明 →](README.md)
 
-## Features (v0.4.1)
+## Features (v0.4.2)
 
 - **One-click capture**: right-click any page → "Save to BookmarkDown"; images and links work too
 - **Metadata extraction**: deep support for Bilibili / YouTube (title, uploader, duration); generic Open Graph fallback everywhere else
@@ -107,7 +107,8 @@ node test/fs.test.mjs   # storage layer: init, dedupe, target-collection writes 
 
 ## Roadmap
 
-- **v0.4.1 (current)**: square (1:1) covers shown in full with side padding
+- **v0.4.2 (current)**: side panel button hardening (namespace fallback + clear reload guidance)
+- **v0.4.1**: square (1:1) covers shown in full with side padding
 - **v0.4.0**: YouTube playlist import (playlists / Watch Later; page-data parsing + per-site permission)
 - **v0.3.1**: subfolders (collection hierarchy), multiple libraries
 - **v0.3.0**: Bilibili favorites import, dead-link detection, static HTML export

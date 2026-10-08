@@ -46,8 +46,15 @@ $('open').addEventListener('click', () => {
 });
 $('panel').addEventListener('click', async () => {
   try {
+    // 兼容两种命名空间（Chrome 148+ 起同时提供 browser.*；未授予 sidePanel 权限时两者皆无）
+    const sp = (typeof browser !== 'undefined' && browser && browser.sidePanel)
+      || (typeof chrome !== 'undefined' && chrome.sidePanel) || null;
+    if (!sp || typeof sp.open !== 'function') {
+      $('status').textContent = '此浏览器未开放侧栏 API。若扩展刚更新过：到 chrome://extensions 点「重新加载」（或移除后重新加载）再试';
+      return;
+    }
     const w = await chrome.windows.getCurrent();
-    await chrome.sidePanel.open({ windowId: w.id });
+    await sp.open({ windowId: w.id });
     window.close();
   } catch (e) { $('status').textContent = '侧栏打开失败：' + (e.message || e); }
 });
