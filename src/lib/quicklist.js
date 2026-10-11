@@ -2,11 +2,13 @@
 import { listCollectionFiles, readTextFile } from './fs.js';
 import { parseEntries } from './md.js';
 
-/** 读全库条目（按收藏时间倒序） */
-export async function loadEntries(root) {
+/** 读全库条目（按收藏时间倒序）；includePrivate=false 时跳过私密合集（与「海报墙」一致） */
+export async function loadEntries(root, { includePrivate = true } = {}) {
   const files = await listCollectionFiles(root);
+  const skip = includePrivate ? null : new Set(files.filter(f => f.private === true).map(f => f.file));
   const out = [];
   for (const f of files) {
+    if (skip && skip.has(f.file)) continue;
     const text = await readTextFile(root, f.file);
     if (!text) continue;
     for (const e of parseEntries(text)) out.push({ ...e, file: f.file });

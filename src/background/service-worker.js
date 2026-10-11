@@ -2,7 +2,7 @@
 // 右键菜单 → 页面抓取（MAIN 世界）→ 封面双通道 → 写入库目录 → badge 反馈。
 // 权限模型：无 host_permissions；元数据与封面均借右键/图标的 activeTab 临时授权完成。
 
-import { getRootHandle } from '../lib/idb.js';
+import { getActiveRoot } from '../lib/idb.js';
 import { saveCapture, isExcludedBySettings } from '../lib/fs.js';
 import { grabPage } from '../content/page-grab.js';
 import { fetchCoverInPage } from '../content/fetch-cover.js';
@@ -16,15 +16,25 @@ const MENUS = [
   { id: 'bd-page', title: '收藏到 BookmarkDown', contexts: ['page', 'video'] },
   { id: 'bd-image', title: '收藏图片到 BookmarkDown', contexts: ['image'] },
   { id: 'bd-link', title: '收藏链接到 BookmarkDown', contexts: ['link'] },
+  { id: 'bd-library', title: '访问库', contexts: ['action'] },
 ];
 
+function registerMenus() {
+  for (const menu of MENUS) chrome.contextMenus.create(menu, () => { void chrome.runtime.lastError; });
+}
+
+// 幂等注册：点「重新加载」若未触发 onInstalled，也能补上新增菜单项（重复项静默跳过）
+registerMenus();
+
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.removeAll(() => {
-    for (const menu of MENUS) chrome.contextMenus.create(menu);
-  });
+  chrome.contextMenus.removeAll(() => registerMenus());
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === 'bd-library') {
+    chrome.tabs.create({ url: chrome.runtime.getURL('src/library/library.html') });
+    return;
+  }
   if (!tab?.id) return;
   collect(info, tab);
 });
@@ -49,15 +59,15 @@ async function collect(info, tab) {
     return { ok: false, error: '此页面不支持收藏' };
   }
 
-  const root = await getRootHandle();
+  const root = await getActiveRoot();
   if (!root) {
     await badge('!', '请先在库页选择收藏目录');
-    return { ok: false, error: '尚未设置库目录：点扩展图标 →「打开库」→ 选择目录' };
+    return { ok: false, error: '尚未设置库目录：点扩展图标 →「访问库」→ 选择目录' };
   }
   try {
     if (await root.queryPermission({ mode: 'readwrite' }) !== 'granted') {
-      await badge('!', '库目录需要授权：请打开库页点「解锁库」');
-      return { ok: false, error: '库目录未授权：打开库页点「解锁库」' };
+      await badge('!', '库目录需要授权：到库页点「解锁库」');
+      return { ok: false, error: '库目录未授权：到库页点「解锁库」' };
     }
   } catch (_) { /* 个别环境 queryPermission 异常时交给写盘报错 */ }
 

@@ -1,5 +1,5 @@
 // BookmarkDown · Side Panel：边看视频边翻库（单列海报墙）
-import { getRootHandle } from '../lib/idb.js';
+import { getActiveRoot } from '../lib/idb.js';
 import { loadEntries, filterEntries, thumbUrl } from '../lib/quicklist.js';
 
 const $ = id => document.getElementById(id);
@@ -42,13 +42,15 @@ $('q').addEventListener('input', render);
 $('reload').addEventListener('click', load);
 
 async function load() {
-  rootRef = await getRootHandle().catch(() => null);
-  if (!rootRef) { $('col').innerHTML = '<div class="empty">尚未设置库目录——打开库页选择一次</div>'; return; }
+  rootRef = await getActiveRoot().catch(() => null);
+  if (!rootRef) { $('col').innerHTML = '<div class="empty">尚未设置库目录——到库页选择一次</div>'; return; }
   try {
     const perm = await rootRef.queryPermission({ mode: 'readwrite' });
-    if (perm !== 'granted') { $('col').innerHTML = '<div class="empty">库需要授权——打开库页解锁一次</div>'; return; }
-    all = await loadEntries(rootRef);
+    if (perm !== 'granted') { $('col').innerHTML = '<div class="empty">库需要授权——到库页解锁一次</div>'; return; }
+    all = await loadEntries(rootRef, { includePrivate: false }); // 与「海报墙」一致：私密合集不展示
     await render();
   } catch (e) { $('col').innerHTML = '<div class="empty">读取失败：' + esc(e.message || e) + '</div>'; }
 }
+// 每次打开（面板由隐藏转可见）自动刷新，展示最新内容
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') load(); });
 load();

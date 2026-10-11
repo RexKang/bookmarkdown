@@ -1,5 +1,5 @@
 // BookmarkDown · popup：快搜 + 最近收藏 + 收藏当前页
-import { getRootHandle } from '../lib/idb.js';
+import { getActiveRoot } from '../lib/idb.js';
 import { loadEntries, filterEntries, thumbUrl } from '../lib/quicklist.js';
 
 const $ = id => document.getElementById(id);
@@ -60,16 +60,16 @@ $('panel').addEventListener('click', async () => {
 });
 
 async function init() {
-  rootRef = await getRootHandle().catch(() => null);
-  if (!rootRef) { $('status').textContent = '尚未设置库目录——点「打开库」先选择目录。'; return; }
+  rootRef = await getActiveRoot().catch(() => null);
+  if (!rootRef) { $('status').textContent = '尚未设置库目录——点「访问库」先选择目录。'; return; }
   let perm = 'prompt';
   try { perm = await rootRef.queryPermission({ mode: 'readwrite' }); } catch (_) {}
-  if (perm !== 'granted') { $('status').textContent = '库需要授权——打开库页点「解锁库」。'; return; }
+  if (perm !== 'granted') { $('status').textContent = '库需要授权——点「访问库」进库页解锁。'; return; }
   $('collect').disabled = false;
   try {
     all = await loadEntries(rootRef);
     $('cnt').textContent = all.length + ' 条';
-    $('status').textContent = '共 ' + all.length + ' 条 · 回车进入全页墙';
+    $('status').textContent = '共 ' + all.length + ' 条 · 回车进入全页海报墙';
     await render();
   } catch (e) { $('status').textContent = '读取库失败：' + (e.message || e); }
 }
