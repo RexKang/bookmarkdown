@@ -340,6 +340,10 @@ function renderWall(c) {
   fillCovers(c);
 }
 
+// 「直接跳转 / 详情」双区图标（网格 & 列表共用；ⓘ=详情、→=跳转；纯图案同尺寸）
+const ICON_INFO = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.6" stroke="#111" stroke-width="2.3" fill="none"/><circle cx="12" cy="7.9" r="1.45" fill="#111"/><path d="M12 11.2v5.6" stroke="#111" stroke-width="2.5" stroke-linecap="round"/></svg>';
+const ICON_JUMP = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h14M12 5l7 7-7 7" stroke="#111" stroke-width="2.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
 function gridHtml(list) {
   return '<div class="wall">' + list.map(e => {
     const m = e.meta;
@@ -355,6 +359,10 @@ function gridHtml(list) {
       : `<div class="grad" style="background:linear-gradient(135deg,#1d2433,#131722)">${escapeHtml(PLATFORM_LABEL[m.platform] || '')}</div>`}
    <span class="badge coll">${escapeHtml(e.fileTitle)}</span>
    ${m.linkState === 'dead' ? '<span class="badge lbad">已失效</span>' : m.linkState === 'unknown' ? '<span class="badge lbad unk">存疑</span>' : ''}
+   <div class="zones">
+    <div class="zexp"><span class="zcirc">${ICON_INFO}</span></div>
+    ${m.url ? `<div class="zjmp" data-jump="${escapeHtml(e.key)}" title="直接跳转"><span class="zcirc">${ICON_JUMP}</span></div>` : ''}
+   </div>
   </div>
   <div class="ctitle">${escapeHtml(m.title || m.url)}</div>
   <div class="cmeta"><span class="stc" data-stkey="${escapeHtml(e.key)}"><span class="dot ${STATUS_DOT[status]}"></span>${status}</span><span>·</span><span style="overflow:hidden;text-overflow:ellipsis">${escapeHtml(meta)}</span></div>
@@ -375,7 +383,7 @@ function listHtml(list) {
   <td>${m.thumbnail
       ? `<img class="mini" data-cover="${escapeHtml(m.thumbnail)}" alt="">`
       : '<span class="nomark">无图</span>'}</td>
-  <td><div class="rname">${escapeHtml(m.title || m.url)}${m.linkState === 'dead' ? ' <span class="lbadgeList">已失效</span>' : m.linkState === 'unknown' ? ' <span class="lbadgeList unk">存疑</span>' : ''}</div><div class="rsub">${escapeHtml([m.author, fmtDuration(m.duration)].filter(Boolean).join(' · '))}</div></td>
+  <td class="namecell"><div class="rname">${escapeHtml(m.title || m.url)}${m.linkState === 'dead' ? ' <span class="lbadgeList">已失效</span>' : m.linkState === 'unknown' ? ' <span class="lbadgeList unk">存疑</span>' : ''}</div><div class="rsub">${escapeHtml([m.author, fmtDuration(m.duration)].filter(Boolean).join(' · '))}</div>${m.url ? `<div class="lzone" data-jump="${escapeHtml(e.key)}" title="直接跳转"><span class="zcirc sm">${ICON_JUMP}</span></div>` : ''}</td>
   <td><span class="plat">${escapeHtml(PLATFORM_LABEL[m.platform] || m.platform || '')}</span></td>
   <td><span class="colltag">${escapeHtml(e.fileTitle)}</span></td>
   <td><span class="${STATUS_CLASS[status]} stclick" data-stkey="${escapeHtml(e.key)}">${status}</span></td>
@@ -397,6 +405,12 @@ function bindWallEvents(c) {
     const entry = state.entries.find(x => x.key === tr.dataset.key);
     if (!entry) return;
     if (state.batch) toggleEntrySelection(entry.key); else openDetail(entry);
+  }));
+  // 「直接跳转」区：新标签打开原链接（网格右区 / 列表名称右区；不影响其余区域=详情）
+  c.querySelectorAll('.zjmp, .lzone').forEach(el => el.addEventListener('click', ev => {
+    ev.stopPropagation(); ev.preventDefault();
+    const entry = state.entries.find(x => x.key === el.dataset.jump);
+    if (entry?.meta?.url) chrome.tabs.create({ url: entry.meta.url });
   }));
   c.querySelectorAll('.enpick').forEach(el => el.addEventListener('change', () => {
     el.checked ? state.selEntries.add(el.dataset.key) : state.selEntries.delete(el.dataset.key);
