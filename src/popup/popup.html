@@ -7,7 +7,7 @@
   body { width: 320px; margin: 0; padding: 12px; background: #0f1218; color: #f2f4f8;
          font: 13px/1.6 system-ui, "Microsoft YaHei", sans-serif; }
   .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; margin-bottom: 8px; }
-  .brand i { width: 6px; height: 18px; border-radius: 2px; background: #e50914; display: inline-block; }
+  .brand img { width: 20px; height: 20px; display: block; }
   .brand .cnt { color: #96a0b2; font-size: 12px; font-weight: 400; margin-left: auto; }
   .search { width: 100%; box-sizing: border-box; background: #171c26; border: 1px solid #2a3143; border-radius: 7px;
             color: #f2f4f8; padding: 7px 9px; font: inherit; outline: none; }
@@ -29,13 +29,13 @@
 </style>
 </head>
 <body>
-  <div class="brand"><i></i>BookmarkDown<span class="cnt" id="cnt"></span></div>
-  <input class="search" id="q" placeholder="搜索标题 / 作者 / 标签，回车进全页墙" autofocus>
+  <div class="brand"><img src="../../icons/icon48.png" alt="">BookmarkDown<span class="cnt" id="cnt"></span></div>
+  <input class="search" id="q" placeholder="搜索标题 / 作者 / 标签，回车进全页海报墙" autofocus>
   <div class="list" id="list"></div>
   <div class="status" id="status">检查中…</div>
   <div class="btns">
     <button id="collect" disabled>收藏当前页面</button>
-    <button id="open" class="secondary">打开库</button>
+    <button id="open" class="secondary">访问库</button>
     <button id="panel" class="secondary">侧栏</button>
   </div>
   <script type="module" src="popup.js"></script>

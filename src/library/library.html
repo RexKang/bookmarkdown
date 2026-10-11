@@ -10,7 +10,7 @@
 <!-- 状态屏：未选目录 -->
 <div id="screen-onboard" class="screen" hidden>
   <div class="card">
-    <h1><i></i>BookmarkDown <span class="tag">v0.4.2</span></h1>
+    <h1><img src="../../icons/icon128.png" alt="">BookmarkDown <span class="tag">v0.4.2</span></h1>
     <p>本地优先的视频收藏海报墙：每条收藏写成 Markdown 条目 + 封面快照，可直接用 Obsidian 打开、用 git 管理。</p>
     <p>第一步：选择一个文件夹作为「库」（空文件夹即可）。</p>
     <button id="pick">选择库目录…</button>
@@ -20,7 +20,7 @@
 <!-- 状态屏：需要授权 -->
 <div id="screen-locked" class="screen" hidden>
   <div class="card">
-    <h1><i></i>库目录需要授权</h1>
+    <h1><img src="../../icons/icon128.png" alt="">库目录需要授权</h1>
     <p id="lockedText">浏览器重启后需要一次点击完成授权（选「每次访问都允许」后不再询问）。</p>
     <button id="unlock">解锁库</button>
   </div>
@@ -29,8 +29,8 @@
 <!-- 主应用 -->
 <div id="app" class="shell" hidden>
   <aside class="side">
-    <div class="logo"><span class="mark"></span><span><b>BookmarkDown <a id="verLink" class="ver" href="https://github.com/RexKang/bookmarkdown" target="_blank" rel="noopener" title="在 GitHub 上查看">v0.4.2</a></b><small>本地收藏 · 海报墙</small></span></div>
-    <div class="navitem" id="navWall"><span class="ic">▦</span>墙</div>
+    <div class="logo"><img class="mark" src="../../icons/icon128.png" alt=""><span><b>BookmarkDown</b><a id="verLink" class="ver" href="https://github.com/RexKang/bookmarkdown" target="_blank" rel="noopener" title="在 GitHub 上查看">v0.4.2</a></span></div>
+    <div class="navitem" id="navWall"><span class="ic">▦</span>海报墙</div>
     <div class="navitem" id="navInbox"><span class="ic">📥</span>默认<span class="cnt" id="inboxCount">0</span></div>
     <div class="navitem" id="navColl"><span class="ic">🗂</span>合集</div>
     <div class="collistp" id="collist"></div>
