@@ -6,20 +6,22 @@ Right-click any video page to save it. Every bookmark is written into **plain Ma
 
 [中文说明 →](README.md)
 
-## Features (v0.4.2)
+## Features (v0.4.3)
 
 - **One-click capture**: right-click any page → "Save to BookmarkDown"; images and links work too
+- **App icon**: full-bleed rounded square with a centered M (simplified at 16px); used across toolbar / library / popup / side panel
 - **Metadata extraction**: deep support for Bilibili / YouTube (title, uploader, duration); generic Open Graph fallback everywhere else
 - **Dual-channel covers**: in-page fetch first; visible-area screenshot as fallback; originals kept as-is up to 1080P, larger ones scaled to 1920px long side (WebP q92) — quality first
 - **Cover display**: square (1:1) covers shown in full with side padding (never cropped or upscaled); other ratios still fill the card
+- **Detail / direct-jump zones**: hover a card cover — the right 38% opens the original link in a new tab, the rest opens the detail card; same on the list view name column; frosted translucent buttons
 - **Zero host_permissions**: no install-time permission warnings; access to the current tab is granted only via activeTab, only at the moment you capture
-- **Poster wall**: left sidebar (Wall / Default / Collections / Settings), grid & list views, search, status filter, collections; light & dark themes
+- **Poster wall**: left sidebar (Poster wall / Default / Collections / Settings), grid & list views, search, status filter, collections; light & dark themes
 - **Private collections**: mark a collection private — its items stay out of the Wall; a lock icon marks it in the sidebar
 - **Batch & edit**: "Batch manage" mode (delete / set author / copy to / move to); detail card → "Edit" for title / link / author / status / collection / tags / notes / cover
 - **Tags & notes**: tag entries and write body notes; notes render as Markdown (GFM) in the detail card
 - **Cover re-fetch**: one click on an old no-cover entry requests per-site permission and backfills the og title & cover (still zero install warnings)
-- **Popup quick search**: search titles / authors / tags / URLs right from the toolbar icon; Enter opens the full wall
-- **Side panel**: browse your library in a narrow column while watching
+- **Popup quick search**: search titles / authors / tags / URLs right from the toolbar icon; Enter opens the full-page poster wall
+- **Side panel**: browse your library in a narrow column while watching; shows the poster wall by default (private collections hidden, auto-refreshes on open)
 - **Keyboard nav**: `/` or Ctrl+K focuses search; arrows move the card focus; Enter opens details
 - **Bilibili favorites import**: read your Bilibili favorite folders from the settings page and import them in bulk (covers fetched, deduped, titles cleaned)
 - **Dead-link detection**: batch "Check links" marks 404/refused as broken and 403/rate-limited as uncertain; results are written back and badged
@@ -27,6 +29,7 @@ Right-click any video page to save it. Every bookmark is written into **plain Ma
 - **Multiple libraries**: keep several library folders in Settings and switch with one click; "Add library" just adds it to the list (removing never touches files)
 - **Collection hierarchy**: nest collections under a parent (indented in the sidebar); "Move level" in collection management; deleting a collection promotes its children
 - **YouTube import**: paste a playlist link to import (use `WL` for Watch Later); titles / channels / durations / covers fetched automatically, up to 500 items
+- **Context menu**: right-click the toolbar icon → "Visit Library" to jump straight to the library page
 - **Detail card**: click an item for details; click the cover for fullscreen viewing (click anywhere / Esc to close)
 - **Manual entry**: for content you can't capture (in-app links, canvas, restricted pages) — paste a link; cover via click / drag & drop / Ctrl+V anywhere
 - **Deduplication**: the same video / URL is recognized; existing entries can be upgraded with a cover
@@ -69,7 +72,7 @@ Not yet on the store; load it unpacked:
 1. Clone / download this repository
 2. Open `chrome://extensions` and enable "Developer mode"
 3. Click "Load unpacked" and select the repository root (the folder containing `manifest.json`)
-4. Click the extension icon → "Open Library" → pick a folder as your library
+4. Click the extension icon → "Visit Library" → pick a folder as your library
 
 > After a browser restart, click "Unlock library" once on the library page; choose "Allow on every visit" in the prompt to avoid repeats.
 
@@ -107,7 +110,8 @@ node test/fs.test.mjs   # storage layer: init, dedupe, target-collection writes 
 
 ## Roadmap
 
-- **v0.4.2 (current)**: side panel button hardening (namespace fallback + clear reload guidance)
+- **v0.4.3 (current)**: app icon; detail / direct-jump zones; side panel shows the poster wall by default; "Visit Library" / "Poster wall" wording & entry cleanups; active-library read fix
+- **v0.4.2**: side panel button hardening (namespace fallback + clear reload guidance)
 - **v0.4.1**: square (1:1) covers shown in full with side padding
 - **v0.4.0**: YouTube playlist import (playlists / Watch Later; page-data parsing + per-site permission)
 - **v0.3.1**: subfolders (collection hierarchy), multiple libraries

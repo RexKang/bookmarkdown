@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "BookmarkDown",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "本地优先的视频收藏海报墙：右键一键收藏，数据是你磁盘上的 Markdown 条目 + 封面快照",
   "icons": { "16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png", "128": "icons/icon128.png" },
   "minimum_chrome_version": "122",
