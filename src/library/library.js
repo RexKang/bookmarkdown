@@ -7,7 +7,7 @@ import { getRootHandle, setRootHandle, idbGet, idbSet,
 import { YT_ORIGINS, importYoutubePlaylist, fetchYtCover, makeYtTabPaginator } from '../lib/yt.js';
 import {
   ensureLibrary, listCollectionFiles, readTextFile, writeFile,
-  readIndexTopics, INDEX_FILE, INBOX_ID, saveCapture, processCover, THUMB_DIR,
+  readIndexTopics, INDEX_FILE, INBOX_ID, saveCapture, processCover, THUMB_DIR, isEffectivelyPrivate,
 } from '../lib/fs.js';
 import { safeStem, nowStamp } from '../lib/util.js';
 import { renderNote } from '../lib/mdrender.js';
@@ -183,8 +183,13 @@ function collectionTitle(file) {
   return state.files.find(f => f.file === file)?.title || file.replace(/\.md$/i, '');
 }
 
-/** 是否私密合集（墙视图不展示其条目） */
+/** 是否私密合集（墙视图不展示其条目；父合集私密时级联到子合集） */
 function isPrivateFile(file) {
+  return isEffectivelyPrivate(state.files, file);
+}
+
+/** 该合集自身的私密标记（不含父级级联；用于私密按钮的切换语义） */
+function isOwnPrivate(file) {
   return state.files.some(f => f.file === file && f.private === true);
 }
 
@@ -256,7 +261,7 @@ function renderTopbar() {
 
 function refreshCollPrivacyBtn() {
   const files = [...state.selColls];
-  const allPrivate = files.length > 0 && files.every(f => isPrivateFile(f));
+  const allPrivate = files.length > 0 && files.every(f => isOwnPrivate(f));
   $('btnPrivacy').textContent = allPrivate ? '取消私密' : '设置为私密';
   $('btnPrivacy').disabled = files.length === 0;
 }
@@ -1518,7 +1523,7 @@ $('newCollApply').addEventListener('click', async () => {
 $('btnPrivacy').addEventListener('click', async () => {
   const files = [...state.selColls];
   if (!files.length) return;
-  const makePrivate = !files.every(f => isPrivateFile(f));
+  const makePrivate = !files.every(f => isOwnPrivate(f));
   let text = (await readTextFile(state.root, INDEX_FILE)) ?? '';
   for (const f of files) {
     text = updateTopic(text, { file: f }, { private: makePrivate ? true : undefined }).text;

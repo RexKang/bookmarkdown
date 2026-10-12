@@ -104,6 +104,19 @@ export async function listCollectionFiles(root) {
   return out;
 }
 
+/** 有效私密：自身或其任一祖先合集为私密（私密合集整体不进墙，含其子合集） */
+export function isEffectivelyPrivate(files, file) {
+  const list = files || [];
+  const seen = new Set();
+  let cur = list.find(f => f.file === file) || null;
+  while (cur && !seen.has(cur.file)) {
+    if (cur.private === true) return true;
+    seen.add(cur.file);
+    cur = cur.parent ? (list.find(f => f.id === cur.parent) || null) : null;
+  }
+  return false;
+}
+
 export async function readSettings(root) {
   const text = await readTextFile(root, SETTINGS_FILE);
   if (text === null) {

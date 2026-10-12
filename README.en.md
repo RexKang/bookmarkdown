@@ -16,7 +16,7 @@ Right-click any video page to save it. Every bookmark is written into **plain Ma
 - **Detail / direct-jump zones**: hover a card cover — the right 38% opens the original link in a new tab, the rest opens the detail card; same on the list view name column; frosted translucent buttons
 - **Zero host_permissions**: no install-time permission warnings; access to the current tab is granted only via activeTab, only at the moment you capture
 - **Poster wall**: left sidebar (Poster wall / Default / Collections / Settings), grid & list views, search, status filter, collections; light & dark themes
-- **Private collections**: mark a collection private — its items stay out of the Wall; a lock icon marks it in the sidebar
+- **Private collections**: mark a collection private — its items (including sub-collections') stay out of the Wall and side panel; a lock icon marks it in the sidebar
 - **Batch & edit**: "Batch manage" mode (delete / set author / copy to / move to); detail card → "Edit" for title / link / author / status / collection / tags / notes / cover
 - **Tags & notes**: tag entries and write body notes; notes render as Markdown (GFM) in the detail card
 - **Cover re-fetch**: one click on an old no-cover entry requests per-site permission and backfills the og title & cover (still zero install warnings)
@@ -110,7 +110,7 @@ node test/fs.test.mjs   # storage layer: init, dedupe, target-collection writes 
 
 ## Roadmap
 
-- **v0.4.3 (current)**: app icon; detail / direct-jump zones; side panel shows the poster wall by default; "Visit Library" / "Poster wall" wording & entry cleanups; active-library read fix
+- **v0.4.3 (current)**: app icon; detail / direct-jump zones; side panel shows the poster wall by default; "Visit Library" / "Poster wall" wording & entry cleanups; active-library read fix; private collections cascade to sub-collections
 - **v0.4.2**: side panel button hardening (namespace fallback + clear reload guidance)
 - **v0.4.1**: square (1:1) covers shown in full with side padding
 - **v0.4.0**: YouTube playlist import (playlists / Watch Later; page-data parsing + per-site permission)

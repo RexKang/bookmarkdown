@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import {
   ensureLibrary, saveCapture, listCollectionFiles, inboxFile,
-  readSettings, isExcludedBySettings,
+  readSettings, isExcludedBySettings, isEffectivelyPrivate,
 } from '../src/lib/fs.js';
 import { parseEntries, parseTopics, updateTopic } from '../src/lib/md.js';
 import { extForMime } from '../src/lib/fs.js';
@@ -150,5 +150,21 @@ ok(extForMime('image/jpeg') === 'jpg', 'jpeg → jpg');
 ok(extForMime('image/png; charset=x') === 'png', '带参数 mime 容错');
 ok(extForMime('image/webp') === 'webp', 'webp → webp');
 ok(extForMime('') === 'jpg', '空 mime 回落 jpg');
+
+console.log('· 私密级联（父合集私密 → 子合集同样隐藏）');
+{
+  const dir = new FakeDir();
+  const idxC = new FakeFile('index.md');
+  idxC._content = '# BookmarkDown 主题索引\n\n' +
+    '<!-- bookmarkdown-topic {"id":"p1","title":"父","file":"父.md","parent":null,"order":0,"private":true} -->\n- [父](父.md)\n\n' +
+    '<!-- bookmarkdown-topic {"id":"c1","title":"子","file":"子.md","parent":"p1","order":0} -->\n- [子](子.md)\n\n' +
+    '<!-- bookmarkdown-topic {"id":"o1","title":"其他","file":"其他.md","parent":null,"order":1} -->\n- [其他](其他.md)\n';
+  dir.map.set('index.md', idxC);
+  const filesC = await listCollectionFiles(dir);
+  ok(isEffectivelyPrivate(filesC, '父.md') === true, '父合集：有效私密');
+  ok(isEffectivelyPrivate(filesC, '子.md') === true, '子合集：级联隐藏');
+  ok(isEffectivelyPrivate(filesC, '其他.md') === false, '其他合集：不受影响');
+  ok(isEffectivelyPrivate(filesC, '不存在.md') === false, '未知名：安全回落 false');
+}
 
 console.log(`\n全部通过：${passed} 项断言`);
